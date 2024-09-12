@@ -1,3 +1,10 @@
+## [3.1.2](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/compare/v3.1.1...v3.1.2) (2024-09-12)
+
+
+### Bug Fixes
+
+* release 4.0 ([#202](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/202)) ([122aeaa](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/122aeaacee65585134642ea01f669d3189001203))
+
 ## [3.1.1](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/compare/v3.1.0...v3.1.1) (2024-09-12)
 
 
