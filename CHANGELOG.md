@@ -1,3 +1,36 @@
+# [3.1.0](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/compare/v3.0.1...v3.1.0) (2024-09-12)
+
+
+### Bug Fixes
+
+* anoncred verification and breaking changes missing ([#196](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/196)) ([149adda](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/149addacdf8fb7b7f849a84ea945911535fa3648))
+* backup recovery was linking incorrectly dids with private keys ([#178](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/178)) ([06e9a8f](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/06e9a8f7caa000510d9a994a2188d0c56e6cb763))
+* bitstring for revocation registry ([#188](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/188)) ([22a2da9](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/22a2da9e5444a4f19a47601779cdcc9efe3ea7a1))
+* DbConnection cannot be extended ([#169](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/169)) ([82b03cc](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/82b03cc0215cb79d0dd0b3142a457a1df754d192))
+* e2e test broken after pull credential changed based on validUntil ([#158](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/158)) ([f21df25](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/f21df258b9488631d699bfe38c4842176ebf688d))
+* JWT proof ([#163](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/163)) ([4e52aed](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/4e52aed77aeddaeb1f15e345a1384374b9a2591e))
+* missed renaming ([c71741f](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/c71741f50ed0d2074cf24964f6c8a4db7f0793a3))
+* renaming ([9585d1a](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/9585d1abc731c0441fbb232d6f2d768c14c46bb2))
+* renaming reference issues ([3adb41f](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/3adb41f0acf45b396e8a9aee54408209b4e54a6a))
+* restore process duplicates did peers ([#173](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/173)) ([da747c5](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/da747c5991e75d27a7eccc0c0078631ed6da1696))
+* restore process from swift/ts jwe ([#175](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/175)) ([b9571b2](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/b9571b2ef532edb00d012c1ca6cf1fb3689cec69))
+* Upgrade gradle ([#140](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/140)) ([1e11da4](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/1e11da40c20480848a069c306f80839bf5659741))
+* wrong casting KeyPair instead of PublicKey ([#139](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/139)) ([7d0a5c9](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/7d0a5c96788a01c5acb59e441be5f0a8c5c0ab5e))
+* zkp presentation could not be verified on the agent ([#157](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/157)) ([3319dc4](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/3319dc455013080639a81b28993ce53333e3b91e))
+
+
+### Features
+
+* Anoncreds verification ([#186](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/186)) ([52c3895](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/52c3895cccbfb3a86477e040dd26515d7e2b430c))
+* back up and restore ([#159](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/159)) ([dcb10fd](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/dcb10fd48bcb9fd3d93f284736605e656538ab0d))
+* contactless presentation request ([#192](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/192)) ([e03ebbc](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/e03ebbc1380752a1030d6c00bbe984b5658fdd48))
+* experimental opt-in for mediator live mode ([#150](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/150)) ([0e30346](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/0e30346b7dd9516a5e5625dfec4a003ad8e408cb))
+* **pollux:** add sdjwt capability ([#174](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/174)) ([cd3baf8](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/cd3baf89325a90c6086f67aa97a2a54a64b6691c))
+* revocation notification event ([#148](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/148)) ([e1753ec](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/e1753ec597e0295c434303ed8898324d92744372))
+* support for mediator live mode (websocket) ([#147](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/147)) ([823b8b3](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/823b8b36177c9b2e939b245b0758f3c448884cf5))
+* verification from SDK ([#155](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/155)) ([61720b8](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/61720b87368afab0bca7a45adf9448e28b4dea15))
+* Verification JWT Revocation registry check ([#165](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues/165)) ([755a7ef](https://github.com/hyperledger/identus-edge-agent-sdk-kmp/commit/755a7efbd5cd982fd180cac70356a9a3ada4d5e4))
+
 # [3.0.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.6.0...v3.0.0) (2024-03-05)
 
 
