@@ -392,7 +392,7 @@ class EdgeAgentTests {
             agentOptions = AgentOptions()
         )
         plutoMockOld.getPrismLastKeyPathIndexReturn = flow { emit(0) }
-        val newDID = agent.createNewPrismDID(format = "vc+sd-jwt")
+        val newDID = agent.createNewPrismDID()
     }
 
     @Test

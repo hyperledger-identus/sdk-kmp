@@ -49,7 +49,7 @@ class DIDsViewModel(application: Application) : AndroidViewModel(application) {
     fun createPrismDID() {
         viewModelScope.launch {
             val sdk = Sdk.getInstance()
-            val did = sdk.agent.createNewPrismDID(format = "vc+sd-jwt")
+            val did = sdk.agent.createNewPrismDID()
         }
     }
 }

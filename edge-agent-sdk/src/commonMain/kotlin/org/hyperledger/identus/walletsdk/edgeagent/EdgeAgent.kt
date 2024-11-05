@@ -82,15 +82,7 @@ import org.hyperledger.identus.walletsdk.domain.models.Seed
 import org.hyperledger.identus.walletsdk.domain.models.Signature
 import org.hyperledger.identus.walletsdk.domain.models.UnknownError
 import org.hyperledger.identus.walletsdk.domain.models.httpClient
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurveKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.DerivationPathKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyTypes
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PrivateKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.SeedKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.StorableKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.StorablePrivateKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.TypeKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.*
 import org.hyperledger.identus.walletsdk.edgeagent.helpers.AgentOptions
 import org.hyperledger.identus.walletsdk.edgeagent.mediation.BasicMediatorHandler
 import org.hyperledger.identus.walletsdk.edgeagent.mediation.MediationHandler
@@ -360,7 +352,6 @@ open class EdgeAgent {
         logger.info(message = "Agent not running")
     }
 
-    // DID Higher Functions
     /**
      * This method create a new Prism DID, that can be used to identify the agent and interact with other agents.
      *
@@ -376,15 +367,36 @@ open class EdgeAgent {
         services: Array<DIDDocument.Service> = emptyArray()
     ): DID {
         val index = keyPathIndex ?: (pluto.getPrismLastKeyPathIndex().first() + 1)
-        val masterKeyPair = Secp256k1KeyPair.generateKeyPair(seed, KeyCurve(Curve.SECP256K1, index))
 
-        val authenticationKey = Ed25519KeyPair.generateKeyPair()
+        val secp256k1PrivateKeyProperties: MutableMap<String, Any> = mutableMapOf()
+        secp256k1PrivateKeyProperties[TypeKey().property] = KeyTypes.EC
+        secp256k1PrivateKeyProperties[SeedKey().property] = seed.value.base64UrlEncoded
+        secp256k1PrivateKeyProperties[CurveKey().property] = Curve.SECP256K1.value
+        secp256k1PrivateKeyProperties[IndexKey().property] = index
+
+        val ed25519PrivateKeyProperties: MutableMap<String, Any> = mutableMapOf()
+
+        ed25519PrivateKeyProperties[TypeKey().property] = KeyTypes.EC
+        ed25519PrivateKeyProperties[SeedKey().property] = seed.value.base64UrlEncoded
+        ed25519PrivateKeyProperties[CurveKey().property] = Curve.SECP256K1.value
+        ed25519PrivateKeyProperties[IndexKey().property] = index
+
+        val masterKey = this.apollo.createPrivateKey(
+            secp256k1PrivateKeyProperties
+        ) as Secp256k1PrivateKey
+
+        val authenticationKey = this.apollo.createPrivateKey(
+            ed25519PrivateKeyProperties
+        ) as Ed25519PrivateKey
+
         val did = castor.createPrismDID(
-            masterPublicKey = masterKeyPair.publicKey,
+            masterPublicKey = masterKey.publicKey(),
             services = services,
-            authenticationKey = authenticationKey.publicKey
+            authenticationKeys = arrayOf(
+                authenticationKey.publicKey()
+            )
         )
-        registerPrismDID(did, index, alias, masterKeyPair.privateKey)
+        registerPrismDID(did, index, alias, masterKey)
         return did
     }
 

@@ -231,8 +231,16 @@ class PolluxImplTest {
                     Seed(MnemonicHelper.createRandomSeed()),
                     KeyCurve(Curve.SECP256K1)
                 )
-            val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-            val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+            val issuerDID = castor.createPrismDID(
+                issuerKeyPair.publicKey,
+                emptyArray(),
+                emptyArray()
+            )
+            val holderDID = castor.createPrismDID(
+                holderKeyPair.publicKey,
+                emptyArray(),
+                emptyArray()
+            )
 
             pollux = spy(PolluxImpl(apollo, castor, api))
 
@@ -287,8 +295,8 @@ class PolluxImplTest {
                 Seed(MnemonicHelper.createRandomSeed()),
                 KeyCurve(Curve.SECP256K1)
             )
-        val issuerDID = castor.createPrismDID(wrongIssuerKeyPair.publicKey, emptyArray())
-        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+        val issuerDID = castor.createPrismDID(wrongIssuerKeyPair.publicKey, emptyArray(), emptyArray())
+        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
         val httpResponse = correctHttpResponseFetchRevocationRegistry()
 
@@ -341,8 +349,8 @@ class PolluxImplTest {
                     Seed(MnemonicHelper.createRandomSeed()),
                     KeyCurve(Curve.SECP256K1)
                 )
-            val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-            val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+            val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray(), emptyArray())
+            val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
             val httpResponse = correctHttpResponseFetchRevocationRegistry()
 
@@ -397,8 +405,8 @@ class PolluxImplTest {
                 Seed(MnemonicHelper.createRandomSeed()),
                 KeyCurve(Curve.SECP256K1)
             )
-        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray(), emptyArray())
+        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
         val httpResponse = correctHttpResponseFetchRevocationRegistry()
 
@@ -450,8 +458,8 @@ class PolluxImplTest {
                 Seed(MnemonicHelper.createRandomSeed()),
                 KeyCurve(Curve.SECP256K1)
             )
-        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray(), emptyArray())
+        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
         pollux = spy(PolluxImpl(apollo, castor, api))
 
@@ -497,8 +505,8 @@ class PolluxImplTest {
                 Seed(MnemonicHelper.createRandomSeed()),
                 KeyCurve(Curve.SECP256K1)
             )
-        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray(), emptyArray())
+        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
         val httpResponse = correctHttpResponseFetchRevocationRegistry()
 
@@ -550,8 +558,8 @@ class PolluxImplTest {
                 Seed(MnemonicHelper.createRandomSeed()),
                 KeyCurve(Curve.SECP256K1)
             )
-        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray(), emptyArray())
+        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
         val httpResponse = correctHttpResponseFetchRevocationRegistry()
 
@@ -614,8 +622,8 @@ class PolluxImplTest {
                 Seed(MnemonicHelper.createRandomSeed()),
                 KeyCurve(Curve.SECP256K1)
             )
-        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray())
-        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray())
+        val issuerDID = castor.createPrismDID(issuerKeyPair.publicKey, emptyArray(), emptyArray())
+        val holderDID = castor.createPrismDID(holderKeyPair.publicKey, emptyArray(), emptyArray())
 
         pollux = spy(PolluxImpl(apollo, castor, api))
 

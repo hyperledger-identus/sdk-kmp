@@ -9,10 +9,7 @@ import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PrivateKey
 import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PublicKey
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.PrismDIDPublicKey
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.id
-import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
-import org.junit.Ignore
 import org.junit.Test
-import org.mockito.kotlin.mock
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 

@@ -70,13 +70,13 @@ constructor(
     override fun createPrismDID(
         masterPublicKey: PublicKey,
         services: Array<DIDDocument.Service>?,
-        authenticationKey: PublicKey
+        authenticationKeys: Array<PublicKey>
     ): DID {
         return CastorShared.createPrismDID(
             apollo = apollo,
             masterPublicKey = masterPublicKey,
             services = services,
-            authenticationKey = authenticationKey
+            authenticationKeys = authenticationKeys
         )
     }
 

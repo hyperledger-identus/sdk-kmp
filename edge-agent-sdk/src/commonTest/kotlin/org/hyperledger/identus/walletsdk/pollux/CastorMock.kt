@@ -26,7 +26,8 @@ class CastorMock : Castor {
 
     override fun createPrismDID(
         masterPublicKey: PublicKey,
-        services: Array<DIDDocument.Service>?
+        services: Array<DIDDocument.Service>?,
+        authenticationKeys: Array<PublicKey>
     ): DID {
         TODO("Not yet implemented")
     }
