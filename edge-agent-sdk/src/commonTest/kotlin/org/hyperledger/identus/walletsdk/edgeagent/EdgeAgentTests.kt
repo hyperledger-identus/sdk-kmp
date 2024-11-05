@@ -380,7 +380,7 @@ class EdgeAgentTests {
         val apollo = ApolloImpl()
         val castor = CastorImpl(apollo)
         val agent = EdgeAgent(
-            apollo = apollo,
+            apollo = apolloMockOld,
             castor = castor,
             pluto = plutoMockOld,
             mercury = mercuryMockOld,

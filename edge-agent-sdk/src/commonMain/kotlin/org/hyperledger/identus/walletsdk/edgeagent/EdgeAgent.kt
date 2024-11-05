@@ -378,8 +378,8 @@ open class EdgeAgent {
 
         ed25519PrivateKeyProperties[TypeKey().property] = KeyTypes.EC
         ed25519PrivateKeyProperties[SeedKey().property] = seed.value.base64UrlEncoded
-        ed25519PrivateKeyProperties[CurveKey().property] = Curve.SECP256K1.value
-        ed25519PrivateKeyProperties[IndexKey().property] = index
+        ed25519PrivateKeyProperties[CurveKey().property] = Curve.ED25519.value
+        ed25519PrivateKeyProperties[IndexKey().property] = index+1
 
         val masterKey = this.apollo.createPrivateKey(
             secp256k1PrivateKeyProperties

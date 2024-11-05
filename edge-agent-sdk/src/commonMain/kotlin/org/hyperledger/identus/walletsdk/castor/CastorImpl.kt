@@ -125,7 +125,8 @@ constructor(
             try {
                 val resolved = resolver.resolve(did)
                 return resolved
-            } catch (_: CastorError) {
+            } catch (err: CastorError) {
+                println(err.message)
             }
         }
         throw Exception("No resolver could resolve the provided DID.")
