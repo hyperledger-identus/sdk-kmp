@@ -240,7 +240,7 @@ open class PolluxImpl(
     ): Credential {
         val cred: Credential
         when (restorationIdentifier) {
-            "sd-jwt+credential" -> {
+            RestorationID.SDJWT.value -> {
                 cred = SDJWTCredential.fromSDJwtString(credentialData.decodeToString())
             }
 
@@ -615,20 +615,6 @@ open class PolluxImpl(
     }
 
     /**
-     * Parses a PrivateKey into an ECPrivateKey.
-     *
-     * @param privateKey The PrivateKey to parse.
-     * @return The parsed ECPrivateKey.
-     */
-    internal fun parsePrivateKey(privateKey: PrivateKey): ECPrivateKey {
-        return privateKey.jca() as ECPrivateKey
-    }
-
-    private fun parsePublicKey(publicKey: PublicKey): ECPublicKey {
-        return publicKey.jca() as ECPublicKey
-    }
-
-    /**
      * Returns the domain from the given JsonObject.
      *
      * @param jsonObject The JsonObject from which to retrieve the domain.
@@ -687,14 +673,14 @@ open class PolluxImpl(
     }
 
     /**
-     * Signs the claims for a proof presentation JSON Web Token (JWT).
+     * Signs the claims for a proof presentation JSON Web Token (SD+JWT).
      *
-     * @param subjectDID The DID of the subject for whom the JWT is being created.
-     * @param privateKey The private key used to sign the JWT.
+     * @param subjectDID The DID of the subject for whom the SD+JWT is being created.
+     * @param privateKey The private key used to sign the SD+JWT.
      * @param credential The credential to be included in the presentation.
-     * @param domain The domain of the JWT.
-     * @param challenge The challenge value for the JWT.
-     * @return The signed JWT as a string.
+     * @param domain The domain of the SD+JWT.
+     * @param challenge The challenge value for the SD+JWT.
+     * @return The signed SD+JWT as a string.
      */
     internal suspend fun signClaimsProofPresentationSDJWT(
         subjectDID: DID,
@@ -726,9 +712,6 @@ open class PolluxImpl(
         if (privateKey !is ExportableKey) {
             throw PolluxError.PrivateKeyTypeNotSupportedError("The private key should be ${ExportableKey::class.simpleName}")
         }
-
-//            parsePrivateKey(privateKey)
-
         val presentation: MutableMap<String, Collection<String>> = mutableMapOf(
             CONTEXT to setOf(CONTEXT_URL),
             TYPE to setOf(VERIFIABLE_PRESENTATION)
@@ -744,17 +727,19 @@ open class PolluxImpl(
             .claim(VP, presentation)
             .build()
 
-        println("DID: $subjectDID")
         val kid = getSigningKid(subjectDID)
 
+
+        val algorithm = if (privateKey is Secp256k1PrivateKey) { JWSAlgorithm.ES256K } else { JWSAlgorithm.EdDSA }
+        val header = JWSHeader.Builder(algorithm)
+            .keyID(kid)
+            .build()
+        // Sign the JWT with the private key
+        var jwsObject = SignedJWT(header, claims)
         // Generate a JWS header with the ES256K algorithm
         if (privateKey is Secp256k1PrivateKey) {
-            val header = JWSHeader.Builder(JWSAlgorithm.ES256K)
-                .keyID(kid)
-                .build()
-
             // Sign the JWT with the private key
-            var jwsObject = SignedJWT(header, claims)
+
 
             val ecPrivateKey = privateKey.jca() as ECPrivateKey
             val signer = ECDSASigner(
@@ -767,12 +752,8 @@ open class PolluxImpl(
             // Serialize the JWS object to a string
             return jwsObject.serialize()
         } else {
-            val header = JWSHeader.Builder(JWSAlgorithm.EdDSA)
-                .keyID(kid)
-                .build()
 
-            // Sign the JWT with the private key
-            var jwsObject = SignedJWT(header, claims)
+
 
             val edPrivateKey = privateKey.jca() as EdDSAPrivateKey
             val signer = org.bouncycastle.crypto.signers.Ed25519Signer()
@@ -795,11 +776,7 @@ open class PolluxImpl(
                 Base64URL(signature.base64UrlEncoded))
             // Serialize the JWS object to a string
             val jwt = jwsObject.serialize()
-
-
-
             val vc = JWTCredential.fromJwtString(jwt)
-
             val didDocHolder = castor.resolveDID(vc.issuer)
             val authenticationMethodHolder =
                 didDocHolder.coreProperties.find { it::class == DIDDocument.Authentication::class }
@@ -813,7 +790,6 @@ open class PolluxImpl(
             ) {
                 println("Stop")
             }
-
             return jwt
         }
     }
