@@ -18,7 +18,10 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.crypto.Ed25519Verifier
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton
+import com.nimbusds.jose.jwk.KeyUse
+import com.nimbusds.jose.jwk.OctetKeyPair
 import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
@@ -50,8 +53,13 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.bouncycastle.asn1.ASN1Encoding
+import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.jcajce.interfaces.EdDSAPrivateKey
+import org.bouncycastle.jcajce.interfaces.EdDSAPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
@@ -123,6 +131,8 @@ import org.hyperledger.identus.walletsdk.pollux.models.SDJWTPresentationDefiniti
 import org.hyperledger.identus.walletsdk.pollux.models.VerificationKeyType
 import org.hyperledger.identus.walletsdk.pollux.models.W3CCredential
 import org.hyperledger.identus.walletsdk.pollux.utils.BitString
+import java.security.Security
+import java.security.spec.X509EncodedKeySpec
 
 /**
  * Class representing the implementation of the Pollux interface.
@@ -766,6 +776,7 @@ open class PolluxImpl(
                 header.toBase64URL(),
                 claims.toPayload().toBase64URL(),
                 Base64URL(signature.base64UrlEncoded))
+
             // Serialize the JWS object to a string
             val jwt = jwsObject.serialize()
             val vc = JWTCredential.fromJwtString(jwt)
@@ -773,14 +784,9 @@ open class PolluxImpl(
             val authenticationMethodHolder =
                 didDocHolder.coreProperties.find { it::class == DIDDocument.Authentication::class }
                     ?: throw PolluxError.VerificationUnsuccessful("Holder core properties must contain Authentication")
-            val ecPublicKeysHolder =
-                extractEcPublicKeyFromVerificationMethod(authenticationMethodHolder)
-            if (!verifyJWTSignatureWithEcPublicKey(
-                    vc.id,
-                    ecPublicKeysHolder
-                )
-            ) {
-                println("Stop")
+            val pks = extractEdPublicKeyFromVerificationMethod(authenticationMethodHolder)
+            if (!verifyJWTSignatureWithEdPublicKey(vc.id, pks)) {
+                throw PolluxError.VerificationUnsuccessful("Invalid JWT Signature")
             }
             return jwt
         }
@@ -1502,6 +1508,35 @@ open class PolluxImpl(
         return areVerified.find { it } ?: false
     }
 
+    internal fun verifyJWTSignatureWithEdPublicKey(
+        jwtString: String,
+        publicKeys: Array<EdDSAPublicKey>
+    ): Boolean {
+        val jwtPartsIssuer = jwtString.split(".")
+        if (jwtPartsIssuer.size != 3) {
+            throw PolluxError.InvalidJWTString("Invalid JWT string, must contain 3 parts.")
+        }
+        val jwsObject =
+            SignedJWT(
+                Base64URL(jwtPartsIssuer[0]),
+                Base64URL(jwtPartsIssuer[1]),
+                Base64URL(jwtPartsIssuer[2])
+            )
+        val areVerified = publicKeys.map { pk ->
+
+            val octet = OctetKeyPair
+                .Builder(com.nimbusds.jose.jwk.Curve.Ed25519, Base64URL.encode(pk.encoded))
+                .keyUse(KeyUse.SIGNATURE)
+                .build()
+
+            val verifiers = Ed25519Verifier(octet)
+            val provider = BouncyCastleProviderSingleton.getInstance()
+            verifiers.jcaContext.provider = provider
+            jwsObject.verify(verifiers)
+        }
+        return areVerified.find { it } ?: false
+    }
+
     override suspend fun extractEcPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<ECPublicKey> {
         val publicKeys = castor.getPublicKeysFromCoreProperties(arrayOf(coreProperty))
 
@@ -1528,6 +1563,40 @@ open class PolluxImpl(
             }
         }
         return ecPublicKeys.toTypedArray()
+    }
+
+    private suspend fun extractEdPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<EdDSAPublicKey> {
+        val publicKeys = castor.getPublicKeysFromCoreProperties(arrayOf(coreProperty))
+
+        val edPublicKeys = publicKeys.map { publicKey ->
+            when (DIDDocument.VerificationMethod.getCurveByType(publicKey.getCurve())) {
+                Curve.ED25519 -> {
+                    // Add BouncyCastle as a security provider if not already added
+                    if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                        Security.addProvider(BouncyCastleProvider())
+                    }
+
+                    // Create AlgorithmIdentifier for Ed25519
+                    val algId = AlgorithmIdentifier(EdECObjectIdentifiers.id_Ed25519)
+
+                    // Create SubjectPublicKeyInfo with AlgorithmIdentifier and public key bytes
+                    val subjectPublicKeyInfo = SubjectPublicKeyInfo(algId, publicKey.raw)
+
+                    // Get the encoded bytes for the X509EncodedKeySpec
+                    val x509Bytes = subjectPublicKeyInfo.getEncoded(ASN1Encoding.DER)
+
+                    // Generate EdDSAPublicKey from x509Bytes
+                    val keyFactory = KeyFactory.getInstance("Ed25519", BouncyCastleProvider.PROVIDER_NAME)
+                    val x509KeySpec = X509EncodedKeySpec(x509Bytes)
+                    keyFactory.generatePublic(x509KeySpec) as EdDSAPublicKey
+                }
+                else -> {
+                    throw Exception("Key type not supported ${publicKey.getCurve()}")
+                }
+            }
+        }
+
+        return edPublicKeys.toTypedArray()
     }
 
     /**
