@@ -18,7 +18,6 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jose.crypto.ECDSAVerifier
-import com.nimbusds.jose.crypto.Ed25519Signer
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton
 import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.JWTClaimsSet
@@ -28,7 +27,6 @@ import eu.europa.ec.eudi.sdjwt.KeyBindingVerifier
 import eu.europa.ec.eudi.sdjwt.NoSignatureValidation
 import eu.europa.ec.eudi.sdjwt.SdJwtVerifier
 import eu.europa.ec.eudi.sdjwt.recreateClaimsAndDisclosuresPerClaim
-import eu.europa.ec.eudi.sdjwt.sub
 import io.iohk.atala.prism.didcomm.didpeer.core.toJsonElement
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -97,7 +95,6 @@ import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurvePointY
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.ExportableKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyTypes
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PrivateKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.SignableKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.TypeKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.VerifiableKey
@@ -728,19 +725,17 @@ open class PolluxImpl(
             .build()
 
         val kid = getSigningKid(subjectDID)
-
-
-        val algorithm = if (privateKey is Secp256k1PrivateKey) { JWSAlgorithm.ES256K } else { JWSAlgorithm.EdDSA }
-        val header = JWSHeader.Builder(algorithm)
-            .keyID(kid)
-            .build()
+        val algorithm = if (privateKey is Secp256k1PrivateKey) {
+            JWSAlgorithm.ES256K
+        } else {
+            JWSAlgorithm.EdDSA
+        }
+        val header = JWSHeader.Builder(algorithm).keyID(kid).build()
         // Sign the JWT with the private key
         var jwsObject = SignedJWT(header, claims)
         // Generate a JWS header with the ES256K algorithm
         if (privateKey is Secp256k1PrivateKey) {
             // Sign the JWT with the private key
-
-
             val ecPrivateKey = privateKey.jca() as ECPrivateKey
             val signer = ECDSASigner(
                 ecPrivateKey as java.security.PrivateKey,
@@ -752,9 +747,6 @@ open class PolluxImpl(
             // Serialize the JWS object to a string
             return jwsObject.serialize()
         } else {
-
-
-
             val edPrivateKey = privateKey.jca() as EdDSAPrivateKey
             val signer = org.bouncycastle.crypto.signers.Ed25519Signer()
 

@@ -82,7 +82,16 @@ import org.hyperledger.identus.walletsdk.domain.models.Seed
 import org.hyperledger.identus.walletsdk.domain.models.Signature
 import org.hyperledger.identus.walletsdk.domain.models.UnknownError
 import org.hyperledger.identus.walletsdk.domain.models.httpClient
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.*
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurveKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.DerivationPathKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.IndexKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyTypes
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PrivateKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.SeedKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.StorableKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.StorablePrivateKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.TypeKey
 import org.hyperledger.identus.walletsdk.edgeagent.helpers.AgentOptions
 import org.hyperledger.identus.walletsdk.edgeagent.mediation.BasicMediatorHandler
 import org.hyperledger.identus.walletsdk.edgeagent.mediation.MediationHandler
@@ -379,7 +388,7 @@ open class EdgeAgent {
         ed25519PrivateKeyProperties[TypeKey().property] = KeyTypes.EC
         ed25519PrivateKeyProperties[SeedKey().property] = seed.value.base64UrlEncoded
         ed25519PrivateKeyProperties[CurveKey().property] = Curve.ED25519.value
-        ed25519PrivateKeyProperties[IndexKey().property] = index+1
+        ed25519PrivateKeyProperties[IndexKey().property] = index + 1
 
         val masterKey = this.apollo.createPrivateKey(
             secp256k1PrivateKeyProperties

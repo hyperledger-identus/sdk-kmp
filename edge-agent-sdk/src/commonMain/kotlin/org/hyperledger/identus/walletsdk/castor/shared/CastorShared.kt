@@ -117,9 +117,6 @@ internal class CastorShared {
                     ).toProto()
                 )
             }
-
-
-
             val atalaOperation = AtalaOperation(
                 operation = AtalaOperation.Operation.CreateDid(
                     CreateDIDOperation(
@@ -136,7 +133,6 @@ internal class CastorShared {
                     )
                 )
             )
-
             val encodedState = atalaOperation.encodeToByteArray()
             val stateHash = SHA256().digest(encodedState).toHexString()
             val base64State = encodedState.base64UrlEncoded

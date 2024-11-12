@@ -1,7 +1,5 @@
 package org.hyperledger.identus.walletsdk.apollo.utils
 
-import java.security.KeyFactory
-import java.security.spec.PKCS8EncodedKeySpec
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.DEROctetString
 import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
@@ -21,7 +19,8 @@ import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PrivateKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.SignableKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.StorableKey
-
+import java.security.KeyFactory
+import java.security.spec.PKCS8EncodedKeySpec
 
 /**
  * Represents a private key for the Ed25519 algorithm.

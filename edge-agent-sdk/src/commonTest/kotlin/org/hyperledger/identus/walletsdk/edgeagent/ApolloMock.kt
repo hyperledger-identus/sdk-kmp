@@ -1,6 +1,5 @@
 package org.hyperledger.identus.walletsdk.edgeagent
 
-import io.iohk.atala.prism.didcomm.didpeer.base64.base64UrlDecoded
 import io.iohk.atala.prism.didcomm.didpeer.base64.base64UrlDecodedBytes
 import org.bouncycastle.util.encoders.Hex
 import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519KeyPair
@@ -41,7 +40,7 @@ class ApolloMock : Apollo {
     }
 
     override fun createPrivateKey(properties: Map<String, Any>): PrivateKey {
-        val curve = properties["curve"];
+        val curve = properties["curve"]
         if (curve === Curve.SECP256K1.value) {
             return Secp256k1PrivateKey(validRawBase64UrlSecp256k1Sk)
         } else if (curve === Curve.ED25519.value) {
