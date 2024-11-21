@@ -16,6 +16,7 @@ data class CredentialPreview
 constructor(
     @SerialName("schema_id")
     @EncodeDefault
+    val schemaIds: List<String>? = null,
     val schemaId: String? = null,
     val body: Body
 ) {
@@ -27,7 +28,7 @@ constructor(
      * @param schemaId The ID of the schema associated with the credential. Defaults to `null` if not provided.
      * @param attributes An array of attributes to include in the credential preview.
      */
-    constructor(schemaId: String? = null, attributes: Array<Attribute>) : this(schemaId, Body(attributes))
+    constructor(schemaIds: List<String>? = null, schemaId: String? = null, attributes: Array<Attribute>) : this(schemaIds, schemaId, Body(attributes))
 
     /**
      * Compares this [CredentialPreview] object to the specified [other] object for equality.
