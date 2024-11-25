@@ -30,6 +30,9 @@ import eu.europa.ec.eudi.sdjwt.KeyBindingVerifier
 import eu.europa.ec.eudi.sdjwt.NoSignatureValidation
 import eu.europa.ec.eudi.sdjwt.SdJwtVerifier
 import eu.europa.ec.eudi.sdjwt.recreateClaimsAndDisclosuresPerClaim
+import io.iohk.atala.prism.didcomm.didpeer.base64.base64UrlDecoded
+import io.iohk.atala.prism.didcomm.didpeer.base64.base64UrlDecodedBytes
+import io.iohk.atala.prism.didcomm.didpeer.base64.base64UrlEncoded
 import io.iohk.atala.prism.didcomm.didpeer.core.toJsonElement
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -64,9 +67,6 @@ import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
 import org.didcommx.didcomm.common.Typ
-import org.hyperledger.identus.apollo.base64.base64UrlDecoded
-import org.hyperledger.identus.apollo.base64.base64UrlDecodedBytes
-import org.hyperledger.identus.apollo.base64.base64UrlEncoded
 import org.hyperledger.identus.apollo.utils.KMMECSecp256k1PublicKey
 import org.hyperledger.identus.walletsdk.apollo.helpers.gunzip
 import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PrivateKey
@@ -131,7 +131,10 @@ import org.hyperledger.identus.walletsdk.pollux.models.SDJWTPresentationDefiniti
 import org.hyperledger.identus.walletsdk.pollux.models.VerificationKeyType
 import org.hyperledger.identus.walletsdk.pollux.models.W3CCredential
 import org.hyperledger.identus.walletsdk.pollux.utils.BitString
+import java.security.PublicKey
 import java.security.Security
+import java.security.spec.EdECPoint
+import java.security.spec.EdECPublicKeySpec
 import java.security.spec.X509EncodedKeySpec
 
 /**
@@ -785,7 +788,8 @@ open class PolluxImpl(
                 didDocHolder.coreProperties.find { it::class == DIDDocument.Authentication::class }
                     ?: throw PolluxError.VerificationUnsuccessful("Holder core properties must contain Authentication")
             val pks = extractEdPublicKeyFromVerificationMethod(authenticationMethodHolder)
-            if (!verifyJWTSignatureWithEdPublicKey(vc.id, pks)) {
+
+            if (!verifyJWTSignatureWithEdPublicKey( vc.id, pks ) ) {
                 throw PolluxError.VerificationUnsuccessful("Invalid JWT Signature")
             }
             return jwt
@@ -1512,6 +1516,8 @@ open class PolluxImpl(
         jwtString: String,
         publicKeys: Array<EdDSAPublicKey>
     ): Boolean {
+        Security.addProvider(BouncyCastleProvider())
+
         val jwtPartsIssuer = jwtString.split(".")
         if (jwtPartsIssuer.size != 3) {
             throw PolluxError.InvalidJWTString("Invalid JWT string, must contain 3 parts.")
@@ -1524,10 +1530,17 @@ open class PolluxImpl(
             )
         val areVerified = publicKeys.map { pk ->
 
+            val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pk.encoded)
+            val rawPublicKeyBytes: ByteArray = subjectPublicKeyInfo.publicKeyData.bytes
             val octet = OctetKeyPair
-                .Builder(com.nimbusds.jose.jwk.Curve.Ed25519, Base64URL.encode(pk.encoded))
+                .Builder(
+                    com.nimbusds.jose.jwk.Curve.Ed25519,
+                    Base64URL.encode(rawPublicKeyBytes)
+                )
                 .keyUse(KeyUse.SIGNATURE)
                 .build()
+
+
 
             val verifiers = Ed25519Verifier(octet)
             val provider = BouncyCastleProviderSingleton.getInstance()
@@ -1567,6 +1580,9 @@ open class PolluxImpl(
 
     private suspend fun extractEdPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<EdDSAPublicKey> {
         val publicKeys = castor.getPublicKeysFromCoreProperties(arrayOf(coreProperty))
+            .filter {
+                it.getCurve().lowercase() == Curve.ED25519.toString().lowercase()
+            }
 
         val edPublicKeys = publicKeys.map { publicKey ->
             when (DIDDocument.VerificationMethod.getCurveByType(publicKey.getCurve())) {
