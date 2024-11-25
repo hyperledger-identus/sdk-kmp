@@ -92,26 +92,36 @@ internal class CastorShared {
         internal fun createPrismDID(
             apollo: Apollo,
             masterPublicKey: PublicKey,
-            services: Array<DIDDocument.Service>?
+            services: Array<DIDDocument.Service>?,
+            authenticationKeys: Array<PublicKey>
         ): DID {
+            val pks: MutableList<org.hyperledger.identus.protos.PublicKey> = mutableListOf()
+
+            pks.add(
+                PrismDIDPublicKey(
+                    apollo = apollo,
+                    id = PrismDIDPublicKey.Usage.MASTER_KEY.defaultId(),
+                    usage = PrismDIDPublicKey.Usage.MASTER_KEY,
+                    keyData = masterPublicKey
+                ).toProto()
+            )
+
+            // Add a public key for each authentication key
+            for (authKey in authenticationKeys) {
+                pks.add(
+                    PrismDIDPublicKey(
+                        apollo = apollo,
+                        id = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.defaultId(),
+                        usage = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY,
+                        keyData = authKey
+                    ).toProto()
+                )
+            }
             val atalaOperation = AtalaOperation(
                 operation = AtalaOperation.Operation.CreateDid(
                     CreateDIDOperation(
                         didData = CreateDIDOperation.DIDCreationData(
-                            publicKeys = listOf(
-                                PrismDIDPublicKey(
-                                    apollo = apollo,
-                                    id = PrismDIDPublicKey.Usage.MASTER_KEY.defaultId(),
-                                    usage = PrismDIDPublicKey.Usage.MASTER_KEY,
-                                    keyData = masterPublicKey
-                                ).toProto(),
-                                PrismDIDPublicKey(
-                                    apollo = apollo,
-                                    id = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.defaultId(),
-                                    usage = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY,
-                                    keyData = masterPublicKey
-                                ).toProto()
-                            ),
+                            publicKeys = pks,
                             services = services?.map {
                                 Service(
                                     id = it.id,
@@ -123,7 +133,6 @@ internal class CastorShared {
                     )
                 )
             )
-
             val encodedState = atalaOperation.encodeToByteArray()
             val stateHash = SHA256().digest(encodedState).toHexString()
             val base64State = encodedState.base64UrlEncoded

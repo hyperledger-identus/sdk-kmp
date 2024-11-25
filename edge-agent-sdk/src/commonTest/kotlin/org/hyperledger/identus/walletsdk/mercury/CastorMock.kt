@@ -27,7 +27,8 @@ class CastorMock : Castor {
     @Throws(Exception::class)
     override fun createPrismDID(
         masterPublicKey: PublicKey,
-        services: Array<DIDDocument.Service>?
+        services: Array<DIDDocument.Service>?,
+        authenticationKeys: Array<PublicKey>
     ): DID {
         return createPrismDIDReturn ?: throw Exception("createPrismDID() not implemented in mock")
     }

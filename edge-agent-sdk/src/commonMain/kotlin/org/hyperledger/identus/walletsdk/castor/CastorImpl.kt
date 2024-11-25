@@ -69,12 +69,14 @@ constructor(
      */
     override fun createPrismDID(
         masterPublicKey: PublicKey,
-        services: Array<DIDDocument.Service>?
+        services: Array<DIDDocument.Service>?,
+        authenticationKeys: Array<PublicKey>
     ): DID {
         return CastorShared.createPrismDID(
             apollo = apollo,
             masterPublicKey = masterPublicKey,
-            services = services
+            services = services,
+            authenticationKeys = authenticationKeys
         )
     }
 
@@ -123,7 +125,8 @@ constructor(
             try {
                 val resolved = resolver.resolve(did)
                 return resolved
-            } catch (_: CastorError) {
+            } catch (err: CastorError) {
+                println(err.message)
             }
         }
         throw Exception("No resolver could resolve the provided DID.")
