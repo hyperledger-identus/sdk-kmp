@@ -2,7 +2,7 @@
 
 ![badge-platform-android]
 ![badge-platform-jvm]
-[![Coverage Status](https://coveralls.io/repos/github/input-output-hk/atala-prism-wallet-sdk-kmm/badge.svg?branch=main)](https://coveralls.io/github/input-output-hk/atala-prism-wallet-sdk-kmm?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/hyperledger-identus/sdk-kmp/badge.svg?branch=main)](https://coveralls.io/github/hyperledger-identus/sdk-kmp?branch=main)
 
 # Welcome to Edge Agent SDK KMP (Kotlin Multiplatform)
 
@@ -17,10 +17,10 @@ This SDK provides a library and documentation for developers to build Android an
 Edge Agent is a self-sovereign identity (SSI) platform and service suite for verifiable data and digital identity. Built on Cardano, it offers core infrastructure for issuing DIDs (Decentralized identifiers) and verifiable credentials, alongside tools and frameworks to help expand your ecosystem.
 The complete platform is separated into multiple repositories:
 
-* [edge-agent-sdk-swift](https://github.com/hyperledger/identus-edge-agent-sdk-swift/) - Repo that implements Edge Agent for Apple platforms in Swift.
-* [edge-agent-sdk-ts](https://github.com/hyperledger/identus-edge-agent-sdk-ts/) - Repo that implements Edge Agent for Browser and Node.js platforms in Typescript.
-* [identus-cloud-agent](https://github.com/hyperledger/identus-cloud-agent/) - Repo that contains the platform Building Blocks.
-* [mediator](https://github.com/hyperledger/identus-mediator/) - Repo for DIDComm V2 Mediator.
+* [sdk-swift](https://github.com/hyperledger-identus/sdk-swift/) - Repo that implements Edge Agent for Apple platforms in Swift.
+* [sdk-ts](https://github.com/hyperledger-identus/sdk-ts/) - Repo that implements Edge Agent for Browser and Node.js platforms in Typescript.
+* [identus-cloud-agent](https://github.com/hyperledger-identus/cloud-agent/) - Repo that contains the platform Building Blocks.
+* [mediator](https://github.com/hyperledger-identus/mediator/) - Repo for DIDComm V2 Mediator.
 
 ### Modules / APIs
 
@@ -48,7 +48,7 @@ To get started with the Edge Agent SDK KMP, you can set up the SDK and start a n
 To integrate the SDK into an existing project, you have to import the SDK into your project:
 
 ```kotlin
-implementation("org.hyperledger.identus:edge-agent-sdk:<latest version>")
+implementation("org.hyperledger.identus.sdk:<latest version>")
 ```
 
 <!-- TAG_PLATFORMS -->
