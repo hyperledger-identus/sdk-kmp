@@ -1,3 +1,10 @@
+# [4.0.0-rc.2](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.1...v4.0.0-rc.2) (2025-03-10)
+
+
+### Bug Fixes
+
+* add missing schema_ids field to the CredentialPreview ([3e97c3d](https://github.com/hyperledger-identus/sdk-kmp/commit/3e97c3dec65e609e718f2f8451202b17f7d2920d))
+
 # [4.0.0-rc.1](https://github.com/hyperledger-identus/sdk-kmp/compare/v3.0.1...v4.0.0-rc.1) (2025-03-10)
 
 
