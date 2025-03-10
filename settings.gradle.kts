@@ -27,7 +27,7 @@ buildscript {
     }
 }
 
-rootProject.name = "edge-agent-sdk"
+rootProject.name = "sdk-ts"
 include(":protosLib")
 include(":edge-agent-sdk")
 include(":sampleapp")

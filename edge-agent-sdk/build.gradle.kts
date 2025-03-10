@@ -5,7 +5,7 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URL
 
-val currentModuleName: String = "EdgeAgentSDK"
+val currentModuleName: String = "SDK"
 val os: OperatingSystem = OperatingSystem.current()
 val apolloVersion = project.property("apollo_version")
 val didpeerVersion = project.property("didpeer_version")
