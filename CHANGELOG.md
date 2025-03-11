@@ -1,3 +1,10 @@
+# [4.0.0-rc.4](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.3...v4.0.0-rc.4) (2025-03-11)
+
+
+### Bug Fixes
+
+* OSSRH_PASSWORD in the workflow ([50051f6](https://github.com/hyperledger-identus/sdk-kmp/commit/50051f6d47dc07da6172e382b9fed823bab9127d))
+
 # [4.0.0-rc.3](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.2...v4.0.0-rc.3) (2025-03-11)
 
 
