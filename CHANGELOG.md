@@ -1,3 +1,10 @@
+# [4.0.0-rc.3](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.2...v4.0.0-rc.3) (2025-03-11)
+
+
+### Bug Fixes
+
+* commit to make a release ([fd41778](https://github.com/hyperledger-identus/sdk-kmp/commit/fd417783d020ca58449179db5aeb41f1a7cb6783))
+
 # [4.0.0-rc.2](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.1...v4.0.0-rc.2) (2025-03-10)
 
 
