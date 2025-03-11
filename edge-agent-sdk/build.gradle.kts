@@ -37,9 +37,9 @@ publishing {
             artifactId = project.name
             version = project.version.toString()
             pom {
-                name.set("Edge Agent SDK")
-                description.set(" Edge Agent SDK - Kotlin Multiplatform (Android/JVM)")
-                url.set("https://docs.atalaprism.io/")
+                name.set("SDK")
+                description.set("Identus Kotlin Multiplatform (Android/JVM) SDK")
+                url.set("https://hyperledger-identus.github.io/docs/")
                 organization {
                     name.set("Hyperledger")
                     url.set("https://hyperledger.org/")
@@ -154,7 +154,7 @@ koverReport {
             setReportFile(layout.buildDirectory.file("reports/android/result.xml"))
         }
         html {
-            title = "Wallet SDK - Android"
+            title = "SDK - Android"
             setReportDir(layout.buildDirectory.dir("reports/android/html"))
         }
     }
@@ -333,7 +333,7 @@ sqldelight {
 tasks.withType<DokkaTask>().configureEach {
     moduleName.set(currentModuleName)
     moduleVersion.set(rootProject.version.toString())
-    description = "This is a Kotlin Multiplatform implementation of Edge Agent SDK KMP"
+    description = "This is a Kotlin Multiplatform implementation of Identus SDK KMP"
     dokkaSourceSets {
         configureEach {
             jdkVersion.set(17)
@@ -351,7 +351,7 @@ tasks.withType<DokkaTask>().configureEach {
             )
             sourceLink {
                 localDirectory.set(projectDir.resolve("src"))
-                remoteUrl.set(URL("https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/tree/main/src"))
+                remoteUrl.set(URL("https://github.com/hyperledger-identus/sdk-kmp/tree/main/src"))
                 remoteLineSuffix.set("#L")
             }
             externalDocumentationLink {
