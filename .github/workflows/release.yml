@@ -71,4 +71,4 @@ jobs:
           OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         run: |
           npm install
-          npx semantic-release --debug
+          npx semantic-release --debug true
