@@ -66,9 +66,9 @@ jobs:
           GIT_AUTHOR_NAME: ${{ steps.import_gpg.outputs.name }}
           GIT_COMMITTER_NAME: ${{ steps.import_gpg.outputs.name }}
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+          OSSRH_TOKEN: ${{ secrets.OSSRH_PASSWORD }}
           OSSRH_GPG_SECRET_KEY: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         run: |
           npm install
-          npx semantic-release --debug true 
+          npx semantic-release --debug true
