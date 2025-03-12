@@ -1,3 +1,10 @@
+# [4.0.0-rc.5](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.4...v4.0.0-rc.5) (2025-03-12)
+
+
+### Bug Fixes
+
+* other environment variable mapping ([2cf980c](https://github.com/hyperledger-identus/sdk-kmp/commit/2cf980c328af468bd6cb9d4b310cd974a2e1c08e))
+
 # [4.0.0-rc.4](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.3...v4.0.0-rc.4) (2025-03-11)
 
 
