@@ -1,3 +1,12 @@
+# [4.0.0-rc.6](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.5...v4.0.0-rc.6) (2025-03-12)
+
+
+### Bug Fixes
+
+* cleanup and set environment variables in build-and-test.yml ([b03b561](https://github.com/hyperledger-identus/sdk-kmp/commit/b03b5614e63c0ec504c95bb777bfd383c6538edf))
+* documentation workflow ([486c233](https://github.com/hyperledger-identus/sdk-kmp/commit/486c233ea615127902b835a8df7f2ae496b1dd91))
+* setup-action cleanup in the release workflow ([2ebf304](https://github.com/hyperledger-identus/sdk-kmp/commit/2ebf304517eaf47cc85456510fc210e44a25ad3a))
+
 # [4.0.0-rc.5](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.4...v4.0.0-rc.5) (2025-03-12)
 
 
