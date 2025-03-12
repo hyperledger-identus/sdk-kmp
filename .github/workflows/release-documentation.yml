@@ -47,13 +47,13 @@ jobs:
 
       - name: Dokka Documentation Generation
         run: |
-          ./gradlew :edge-agent-sdk:dokkaHtml
+          ./gradlew :sdk:dokkaHtml
 
       - name: Push
         uses: s0/git-publish-subdir-action@develop
         env:
           REPO: self
           BRANCH: gh-pages # The branch name where you want to push the assets
-          FOLDER: "edge-agent-sdk/build/dokka/html/" # The directory where your assets are generated
+          FOLDER: "sdk/build/dokka/html/" # The directory where your assets are generated
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub will automatically add this - you don't need to bother getting a token
           MESSAGE: "feat(docs): ({sha}) {msg}" # The commit message
