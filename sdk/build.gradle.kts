@@ -22,16 +22,16 @@ plugins {
 }
 
 publishing {
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("OSSRH_USERNAME")
-                password = System.getenv("OSSRH_TOKEN")
-            }
-        }
-    }
+//    repositories {
+//        maven {
+//            name = "OSSRH"
+//            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+//            credentials {
+//                username = System.getenv("OSSRH_USERNAME")
+//                password = System.getenv("OSSRH_PASSWORD")
+//            }
+//        }
+//    }
     publications {
         withType<MavenPublication> {
             artifactId = project.name
@@ -101,9 +101,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:git://hyperledger/identus-edge-agent-sdk-kmp.git")
-                    developerConnection.set("scm:git:ssh://hyperledger/identus-edge-agent-sdk-kmp.git")
-                    url.set("https://github.com/hyperledger/identus-edge-agent-sdk-kmp")
+                    connection.set("scm:git:git://hyperledger-identus/sdk-kmp.git")
+                    developerConnection.set("scm:git:ssh://hyperledger-identus/sdk-kmp.git")
+                    url.set("https://github.com/hyperledger-identus/sdk-kmp")
                 }
             }
         }
