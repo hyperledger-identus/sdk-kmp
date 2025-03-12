@@ -37,17 +37,12 @@ jobs:
 
       - name: "Install Java ${{ env.JAVA_VERSION }}"
         uses: actions/setup-java@v4
-        continue-on-error: true
-        env:
-          GPG_PASSPHRASE: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
         with:
           java-version: "${{ env.JAVA_VERSION }}"
           distribution: zulu
           server-id: ossrh
           server-username: ${{ secrets.OSSRH_USERNAME }}
           server-password: ${{ secrets.OSSRH_PASSWORD }}
-          gpg-private-key: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
-          gpg-passphrase: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
 
 
       - uses: crazy-max/ghaction-import-gpg@v5
