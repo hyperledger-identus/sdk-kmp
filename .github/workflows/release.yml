@@ -1,5 +1,5 @@
 ---
-name: Release sdk
+name: Release SDK
 
 env:
   JAVA_VERSION: 17
