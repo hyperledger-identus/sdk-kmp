@@ -1,3 +1,10 @@
+# [4.0.0-rc.7](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.6...v4.0.0-rc.7) (2025-03-12)
+
+
+### Bug Fixes
+
+* remove gpg init from the setup java action ([6a37353](https://github.com/hyperledger-identus/sdk-kmp/commit/6a37353d199ff81387122559aeb9192853887e37))
+
 # [4.0.0-rc.6](https://github.com/hyperledger-identus/sdk-kmp/compare/v4.0.0-rc.5...v4.0.0-rc.6) (2025-03-12)
 
 
