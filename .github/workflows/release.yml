@@ -1,5 +1,5 @@
 ---
-name: Release sdk
+name: Release SDK
 
 env:
   JAVA_VERSION: 17
@@ -25,27 +25,24 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.IDENTUS_CI }}
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
 
       - name: "Install Java ${{ env.JAVA_VERSION }}"
         uses: actions/setup-java@v4
-        continue-on-error: true
         with:
           java-version: "${{ env.JAVA_VERSION }}"
           distribution: zulu
           server-id: ossrh
           server-username: ${{ secrets.OSSRH_USERNAME }}
           server-password: ${{ secrets.OSSRH_PASSWORD }}
-          gpg-private-key: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
-          gpg-passphrase: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
 
 
       - uses: crazy-max/ghaction-import-gpg@v5
@@ -61,14 +58,15 @@ jobs:
       - name: "Release"
         env:
           GITHUB_TOKEN: ${{ secrets.IDENTUS_CI }}
+          GITHUB_ACTOR: ${{ steps.import_gpg.outputs.name }}
           GIT_AUTHOR_EMAIL: ${{ steps.import_gpg.outputs.email }}
           GIT_COMMITTER_EMAIL: ${{ steps.import_gpg.outputs.email }}
           GIT_AUTHOR_NAME: ${{ steps.import_gpg.outputs.name }}
           GIT_COMMITTER_NAME: ${{ steps.import_gpg.outputs.name }}
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-          OSSRH_GPG_SECRET_KEY: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-          OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          OSSRH_GPG_SECRET_KEY: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
+          OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
         run: |
           npm install
           npx semantic-release

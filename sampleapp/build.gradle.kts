@@ -71,7 +71,7 @@ dependencies {
     implementation("io.ktor:ktor-client-logging:2.3.11")
 
     // WalletSDK
-    implementation(project(":edge-agent-sdk"))
+    implementation(project(":sdk"))
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.3.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
 

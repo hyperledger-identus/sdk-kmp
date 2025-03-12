@@ -1,11 +1,11 @@
-# [3.0.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.6.0...v3.0.0) (2024-03-05)
+# [3.0.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.6.0...v3.0.0) (2024-03-05)
 
 
 ### Bug Fixes
 
-* adds env var for maven central publication ([#134](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/134)) ([d049f35](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/d049f35663b1a92cb31857ceea4b882611d0a5db))
-* release pipeline variable ([#135](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/135)) ([bbc8a38](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/bbc8a3833c49d029a9440763b43c1d8957279e3e))
-* chore!: update did peer library version  (#128) ([ea08251](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/ea082513a801e6eb4ac9384b35c074cf34082dbc)), closes [#128](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/128)
+* adds env var for maven central publication ([#134](https://github.com/hyperledger-identus/sdk-kmp/issues/134)) ([d049f35](https://github.com/hyperledger-identus/sdk-kmp/commit/d049f35663b1a92cb31857ceea4b882611d0a5db))
+* release pipeline variable ([#135](https://github.com/hyperledger-identus/sdk-kmp/issues/135)) ([bbc8a38](https://github.com/hyperledger-identus/sdk-kmp/commit/bbc8a3833c49d029a9440763b43c1d8957279e3e))
+* chore!: update did peer library version  (#128) ([ea08251](https://github.com/hyperledger-identus/sdk-kmp/commit/ea082513a801e6eb4ac9384b35c074cf34082dbc)), closes [#128](https://github.com/hyperledger-identus/sdk-kmp/issues/128)
 
 
 ### BREAKING CHANGES
@@ -13,137 +13,137 @@
 * Support OEA 1.26+ due to updates on the PeerDID Specs changes.
   Signed-off-by: Ahmed Moussa <ahmed.moussa@iohk.io>
 
-# [2.7.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.6.0...v2.7.0) (2024-01-31)
+# [2.7.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.6.0...v2.7.0) (2024-01-31)
 
 
 ### Bug Fixes
 
-* **DIDCommWrapper:** Crash when body is empty string ([#124](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/124)) ([ed537f6](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/ed537f6a3a165f06b1fe3c0b919213ddbaa8e9fb))
+* **DIDCommWrapper:** Crash when body is empty string ([#124](https://github.com/hyperledger-identus/sdk-kmp/issues/124)) ([ed537f6](https://github.com/hyperledger-identus/sdk-kmp/commit/ed537f6a3a165f06b1fe3c0b919213ddbaa8e9fb))
 
 
 ### Features
 
-* receive and process presentation request ([#120](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/120)) ([1194d11](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/1194d11b36cab08e5bfa080a60fd2611b6c0ea39))
+* receive and process presentation request ([#120](https://github.com/hyperledger-identus/sdk-kmp/issues/120)) ([1194d11](https://github.com/hyperledger-identus/sdk-kmp/commit/1194d11b36cab08e5bfa080a60fd2611b6c0ea39))
 
-# [2.6.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.5.0...v2.6.0) (2023-11-29)
+# [2.6.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.5.0...v2.6.0) (2023-11-29)
 
 
 ### Bug Fixes
 
-* ATL-5864 pr changes ([#109](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/109)) ([1e32bb7](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/1e32bb79c9ed1970cdd6797736830c3be60f8258))
-* fixes demo app fetching job ([#110](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/110)) ([8485b34](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/8485b34f24d7cb1e73692aceb752657bc4a7175c))
-* replace antlr with regex to solve did creation issues ([#114](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/114)) ([854fc70](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/854fc70b1c0271e1bf5f4b6a63433d41a9d35a1f))
+* ATL-5864 pr changes ([#109](https://github.com/hyperledger-identus/sdk-kmp/issues/109)) ([1e32bb7](https://github.com/hyperledger-identus/sdk-kmp/commit/1e32bb79c9ed1970cdd6797736830c3be60f8258))
+* fixes demo app fetching job ([#110](https://github.com/hyperledger-identus/sdk-kmp/issues/110)) ([8485b34](https://github.com/hyperledger-identus/sdk-kmp/commit/8485b34f24d7cb1e73692aceb752657bc4a7175c))
+* replace antlr with regex to solve did creation issues ([#114](https://github.com/hyperledger-identus/sdk-kmp/issues/114)) ([854fc70](https://github.com/hyperledger-identus/sdk-kmp/commit/854fc70b1c0271e1bf5f4b6a63433d41a9d35a1f))
 
 
 ### Features
 
-* document the latest development ([#115](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/115)) ([d435148](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/d4351480a1ccbacea503e31edc7ebdc220653149))
-* implement derivableKey an include it into Secp256k1PrivateKey ([#112](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/112)) ([cecbbb1](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/cecbbb16be1d2423d5a33edad3b549be12c7ab91))
-* Importable/Exportable keys ([#107](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/107)) ([adc2b6a](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/adc2b6a37e107d8f4c09268886123c690ac0ebed))
-* KeyRestoration ([#111](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/111)) ([ccfb584](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/ccfb5840f5db9694abfcb097b779ce3257f1c9a6))
+* document the latest development ([#115](https://github.com/hyperledger-identus/sdk-kmp/issues/115)) ([d435148](https://github.com/hyperledger-identus/sdk-kmp/commit/d4351480a1ccbacea503e31edc7ebdc220653149))
+* implement derivableKey an include it into Secp256k1PrivateKey ([#112](https://github.com/hyperledger-identus/sdk-kmp/issues/112)) ([cecbbb1](https://github.com/hyperledger-identus/sdk-kmp/commit/cecbbb16be1d2423d5a33edad3b549be12c7ab91))
+* Importable/Exportable keys ([#107](https://github.com/hyperledger-identus/sdk-kmp/issues/107)) ([adc2b6a](https://github.com/hyperledger-identus/sdk-kmp/commit/adc2b6a37e107d8f4c09268886123c690ac0ebed))
+* KeyRestoration ([#111](https://github.com/hyperledger-identus/sdk-kmp/issues/111)) ([ccfb584](https://github.com/hyperledger-identus/sdk-kmp/commit/ccfb5840f5db9694abfcb097b779ce3257f1c9a6))
 
-# [2.5.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.4.0...v2.5.0) (2023-11-20)
-
-
-### Features
-
-* mediator DID can be updated from sample app UI ([#106](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/106)) ([f20e1bb](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/f20e1bbe98ab6990da69d0c26e733c3a3dc1c604))
-
-# [2.4.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.3.2...v2.4.0) (2023-10-26)
+# [2.5.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.4.0...v2.5.0) (2023-11-20)
 
 
 ### Features
 
-* anoncreds receive and store ([#91](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/91)) ([5a757dd](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/5a757dd7add814bdb35901fee1e4d0f9cef3c1ad))
-* cryptographic abstraction and apollo integration ([#100](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/100)) ([0549258](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/0549258251a69eebc3f032466263575966dbad21))
+* mediator DID can be updated from sample app UI ([#106](https://github.com/hyperledger-identus/sdk-kmp/issues/106)) ([f20e1bb](https://github.com/hyperledger-identus/sdk-kmp/commit/f20e1bbe98ab6990da69d0c26e733c3a3dc1c604))
 
-## [2.3.2](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.3.1...v2.3.2) (2023-09-19)
-
-
-### Bug Fixes
-
-* bump version for prism-agent v1.16 compatibility ([#99](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/99)) ([238a17c](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/238a17ccbd60253d862bad043bf23fccd87772a0))
-
-## [2.3.1](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.3.0...v2.3.1) (2023-08-30)
-
-
-### Bug Fixes
-
-* **pollux:** fix JWTPayload serlization & Update Error Handling ([#97](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/97)) ([9eb3927](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/9eb39274c119b293c26dd4e81be674d06fda9fd4))
-
-# [2.3.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.2.0...v2.3.0) (2023-08-30)
+# [2.4.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.3.2...v2.4.0) (2023-10-26)
 
 
 ### Features
 
-* **agent:** add extra headers that were missing ([#96](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/96)) ([eaf8b23](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/eaf8b233d05feddbaf96893d1b941a8604e5a5b7))
+* anoncreds receive and store ([#91](https://github.com/hyperledger-identus/sdk-kmp/issues/91)) ([5a757dd](https://github.com/hyperledger-identus/sdk-kmp/commit/5a757dd7add814bdb35901fee1e4d0f9cef3c1ad))
+* cryptographic abstraction and apollo integration ([#100](https://github.com/hyperledger-identus/sdk-kmp/issues/100)) ([0549258](https://github.com/hyperledger-identus/sdk-kmp/commit/0549258251a69eebc3f032466263575966dbad21))
 
-# [2.2.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.1.1...v2.2.0) (2023-08-29)
+## [2.3.2](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.3.1...v2.3.2) (2023-09-19)
 
 
 ### Bug Fixes
 
-* pr change request ATL-4965 ([#90](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/90)) ([023f285](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/023f285f5b75ac0305db8e8b3a9e8f6f11f5d6d2))
+* bump version for prism-agent v1.16 compatibility ([#99](https://github.com/hyperledger-identus/sdk-kmp/issues/99)) ([238a17c](https://github.com/hyperledger-identus/sdk-kmp/commit/238a17ccbd60253d862bad043bf23fccd87772a0))
+
+## [2.3.1](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.3.0...v2.3.1) (2023-08-30)
+
+
+### Bug Fixes
+
+* **pollux:** fix JWTPayload serlization & Update Error Handling ([#97](https://github.com/hyperledger-identus/sdk-kmp/issues/97)) ([9eb3927](https://github.com/hyperledger-identus/sdk-kmp/commit/9eb39274c119b293c26dd4e81be674d06fda9fd4))
+
+# [2.3.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.2.0...v2.3.0) (2023-08-30)
 
 
 ### Features
 
-* credential abstraction ([#88](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/88)) ([4354341](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/435434147457022ba86a42f970b7170b082330e4))
-* **mercury:** add extra headers and add to pickup return route ([#94](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/94)) ([ae8fe21](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/ae8fe2155647c61c91998cac8df20d3f82ae33d1))
+* **agent:** add extra headers that were missing ([#96](https://github.com/hyperledger-identus/sdk-kmp/issues/96)) ([eaf8b23](https://github.com/hyperledger-identus/sdk-kmp/commit/eaf8b233d05feddbaf96893d1b941a8604e5a5b7))
 
-## [2.1.1](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.1.0...v2.1.1) (2023-07-27)
-
-
-### Bug Fixes
-
-* message model id generates a duplicity issue ([#86](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/86)) ([f00b53a](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/f00b53a5a14f5c8026ca18fbf4b984e13e361f43))
-* override received message if already exists ([#87](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/87)) ([7cac37c](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/7cac37c1b39328d1ed5ed52f492e4fb316000908))
-
-# [2.1.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.0.2...v2.1.0) (2023-07-26)
+# [2.2.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.1.1...v2.2.0) (2023-08-29)
 
 
 ### Bug Fixes
 
-* base64 attachments and http correct request headers ([#85](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/85)) ([ad223b9](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/ad223b9914836a46127d4e6db66d94d57b9c1076))
-* delete unwanted comment from README.md ([#84](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/84)) ([47e4a0a](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/47e4a0a05d72a0c23b691d396e3b344b7bb49d02))
-* make forward message and its body non internal ([#82](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/82)) ([ae2caa8](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/ae2caa80de37133a7c3bb3ba59f20ab414eca7e9))
+* pr change request ATL-4965 ([#90](https://github.com/hyperledger-identus/sdk-kmp/issues/90)) ([023f285](https://github.com/hyperledger-identus/sdk-kmp/commit/023f285f5b75ac0305db8e8b3a9e8f6f11f5d6d2))
 
 
 ### Features
 
-* Update README.md ([#83](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/83)) ([df70182](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/df701825c3565eda0477fdb3cef2d189b0fa4436))
+* credential abstraction ([#88](https://github.com/hyperledger-identus/sdk-kmp/issues/88)) ([4354341](https://github.com/hyperledger-identus/sdk-kmp/commit/435434147457022ba86a42f970b7170b082330e4))
+* **mercury:** add extra headers and add to pickup return route ([#94](https://github.com/hyperledger-identus/sdk-kmp/issues/94)) ([ae8fe21](https://github.com/hyperledger-identus/sdk-kmp/commit/ae8fe2155647c61c91998cac8df20d3f82ae33d1))
 
-## [2.0.2](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.0.1...v2.0.2) (2023-06-27)
-
-
-### Bug Fixes
-
-* **enhancements:** add @JvmOverloads for JWTJsonPayload ([#81](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/81)) ([2a7fe15](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/2a7fe15db68c080be18421082bb0a24fbe5045a1))
-* JWTJsonPayload fields are optional except ([#80](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/80)) ([e095c49](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/e095c4914a8754b8324e57069901ccf10ee9d8a3))
-
-## [2.0.1](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v2.0.0...v2.0.1) (2023-06-25)
+## [2.1.1](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.1.0...v2.1.1) (2023-07-27)
 
 
 ### Bug Fixes
 
-* **ATL-4978:** fix OOB connection ([#79](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/79)) ([cd18709](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/cd187096e57b1a45d8eae01fea789a255a31e4ed))
+* message model id generates a duplicity issue ([#86](https://github.com/hyperledger-identus/sdk-kmp/issues/86)) ([f00b53a](https://github.com/hyperledger-identus/sdk-kmp/commit/f00b53a5a14f5c8026ca18fbf4b984e13e361f43))
+* override received message if already exists ([#87](https://github.com/hyperledger-identus/sdk-kmp/issues/87)) ([7cac37c](https://github.com/hyperledger-identus/sdk-kmp/commit/7cac37c1b39328d1ed5ed52f492e4fb316000908))
 
-# [2.0.0](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/compare/v1.0.0...v2.0.0) (2023-06-21)
+# [2.1.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.0.2...v2.1.0) (2023-07-26)
 
 
 ### Bug Fixes
 
-* agent start and mediation achieved ([#60](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/60)) ([e24f67a](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/e24f67a682b4d93f701fb31d6a5163f16bc919ec))
-* create peer DID with updateMediator false does not ignore provided services ([#73](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/73)) ([662c845](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/662c8456ef8fd3e9e1730d3ddde1c2b9869cc14a))
-* credentials duplicated when stored localy ([#69](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/69)) ([f1b6518](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/f1b651892edc72cebee0a6174448a9a75443eba6))
-* **docs:** Add general docs & code docs & CI ([a339641](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/a339641db1b1dadb37868342d587cf7bbaf8cc53))
-* Fix dependencies to fully integrate with latest version of packages in prism-protos + protosLib. ([1ed30cf](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/1ed30cffe5020ac0581013dfce9f3e2be0aa6139))
-* Fix key pair creation from private key for ED25519 ([#56](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/56)) ([a8af225](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/a8af22505274b872fd186b801bf4193e6bbf1b4d))
-* Fix key pair creation from private key for X25519 ([#57](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/57)) ([1cfc294](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/1cfc2945c456e22829dd977d296ea64c1a73d0e0))
-* Fix key pair creation from private key using SECP256K1 ([#55](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/55)) ([8b48aa1](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/8b48aa17c8ab08ad7b15333cceb424ee45a85ff2))
-* Implement test for key pair creation using mnemonics and seed for curve SECP256K1 ([#54](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/54)) ([026dc0d](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/026dc0df9969c7817333c99b0b20290298312130))
-* KMP agent up to date with swift public apis ([#67](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/67)) ([7a65b3a](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/7a65b3a74a013d2adf222914a6c2ced814b8a0d2))
-* move hardcoded values into constants ([#72](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/72)) ([4577ecf](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/4577ecf7521e00f12fd7b1e405b796aff00c370b))
+* base64 attachments and http correct request headers ([#85](https://github.com/hyperledger-identus/sdk-kmp/issues/85)) ([ad223b9](https://github.com/hyperledger-identus/sdk-kmp/commit/ad223b9914836a46127d4e6db66d94d57b9c1076))
+* delete unwanted comment from README.md ([#84](https://github.com/hyperledger-identus/sdk-kmp/issues/84)) ([47e4a0a](https://github.com/hyperledger-identus/sdk-kmp/commit/47e4a0a05d72a0c23b691d396e3b344b7bb49d02))
+* make forward message and its body non internal ([#82](https://github.com/hyperledger-identus/sdk-kmp/issues/82)) ([ae2caa8](https://github.com/hyperledger-identus/sdk-kmp/commit/ae2caa80de37133a7c3bb3ba59f20ab414eca7e9))
+
+
+### Features
+
+* Update README.md ([#83](https://github.com/hyperledger-identus/sdk-kmp/issues/83)) ([df70182](https://github.com/hyperledger-identus/sdk-kmp/commit/df701825c3565eda0477fdb3cef2d189b0fa4436))
+
+## [2.0.2](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.0.1...v2.0.2) (2023-06-27)
+
+
+### Bug Fixes
+
+* **enhancements:** add @JvmOverloads for JWTJsonPayload ([#81](https://github.com/hyperledger-identus/sdk-kmp/issues/81)) ([2a7fe15](https://github.com/hyperledger-identus/sdk-kmp/commit/2a7fe15db68c080be18421082bb0a24fbe5045a1))
+* JWTJsonPayload fields are optional except ([#80](https://github.com/hyperledger-identus/sdk-kmp/issues/80)) ([e095c49](https://github.com/hyperledger-identus/sdk-kmp/commit/e095c4914a8754b8324e57069901ccf10ee9d8a3))
+
+## [2.0.1](https://github.com/hyperledger-identus/sdk-kmp/compare/v2.0.0...v2.0.1) (2023-06-25)
+
+
+### Bug Fixes
+
+* **ATL-4978:** fix OOB connection ([#79](https://github.com/hyperledger-identus/sdk-kmp/issues/79)) ([cd18709](https://github.com/hyperledger-identus/sdk-kmp/commit/cd187096e57b1a45d8eae01fea789a255a31e4ed))
+
+# [2.0.0](https://github.com/hyperledger-identus/sdk-kmp/compare/v1.0.0...v2.0.0) (2023-06-21)
+
+
+### Bug Fixes
+
+* agent start and mediation achieved ([#60](https://github.com/hyperledger-identus/sdk-kmp/issues/60)) ([e24f67a](https://github.com/hyperledger-identus/sdk-kmp/commit/e24f67a682b4d93f701fb31d6a5163f16bc919ec))
+* create peer DID with updateMediator false does not ignore provided services ([#73](https://github.com/hyperledger-identus/sdk-kmp/issues/73)) ([662c845](https://github.com/hyperledger-identus/sdk-kmp/commit/662c8456ef8fd3e9e1730d3ddde1c2b9869cc14a))
+* credentials duplicated when stored localy ([#69](https://github.com/hyperledger-identus/sdk-kmp/issues/69)) ([f1b6518](https://github.com/hyperledger-identus/sdk-kmp/commit/f1b651892edc72cebee0a6174448a9a75443eba6))
+* **docs:** Add general docs & code docs & CI ([a339641](https://github.com/hyperledger-identus/sdk-kmp/commit/a339641db1b1dadb37868342d587cf7bbaf8cc53))
+* Fix dependencies to fully integrate with latest version of packages in prism-protos + protosLib. ([1ed30cf](https://github.com/hyperledger-identus/sdk-kmp/commit/1ed30cffe5020ac0581013dfce9f3e2be0aa6139))
+* Fix key pair creation from private key for ED25519 ([#56](https://github.com/hyperledger-identus/sdk-kmp/issues/56)) ([a8af225](https://github.com/hyperledger-identus/sdk-kmp/commit/a8af22505274b872fd186b801bf4193e6bbf1b4d))
+* Fix key pair creation from private key for X25519 ([#57](https://github.com/hyperledger-identus/sdk-kmp/issues/57)) ([1cfc294](https://github.com/hyperledger-identus/sdk-kmp/commit/1cfc2945c456e22829dd977d296ea64c1a73d0e0))
+* Fix key pair creation from private key using SECP256K1 ([#55](https://github.com/hyperledger-identus/sdk-kmp/issues/55)) ([8b48aa1](https://github.com/hyperledger-identus/sdk-kmp/commit/8b48aa17c8ab08ad7b15333cceb424ee45a85ff2))
+* Implement test for key pair creation using mnemonics and seed for curve SECP256K1 ([#54](https://github.com/hyperledger-identus/sdk-kmp/issues/54)) ([026dc0d](https://github.com/hyperledger-identus/sdk-kmp/commit/026dc0df9969c7817333c99b0b20290298312130))
+* KMP agent up to date with swift public apis ([#67](https://github.com/hyperledger-identus/sdk-kmp/issues/67)) ([7a65b3a](https://github.com/hyperledger-identus/sdk-kmp/commit/7a65b3a74a013d2adf222914a6c2ced814b8a0d2))
+* move hardcoded values into constants ([#72](https://github.com/hyperledger-identus/sdk-kmp/issues/72)) ([4577ecf](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/4577ecf7521e00f12fd7b1e405b796aff00c370b))
 * pick up messages and mark as read ([#63](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/63)) ([087bb88](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/087bb882f743ed606d9f34b032133c66345f8818))
 * remove private key storage duplicity ([#75](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/75)) ([549bbeb](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/549bbeb49c90ed348fec2068a48c9fe4b211ce00))
 * request and achieve mediation ([#62](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/issues/62)) ([73f98c5](https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/commit/73f98c50e8c9c757611c333832f4ef5aba351262))

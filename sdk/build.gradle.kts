@@ -5,7 +5,7 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URL
 
-val currentModuleName: String = "EdgeAgentSDK"
+val currentModuleName: String = "sdk"
 val os: OperatingSystem = OperatingSystem.current()
 val apolloVersion = project.property("apollo_version")
 val didpeerVersion = project.property("didpeer_version")
@@ -22,24 +22,14 @@ plugins {
 }
 
 publishing {
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("OSSRH_USERNAME")
-                password = System.getenv("OSSRH_TOKEN")
-            }
-        }
-    }
     publications {
         withType<MavenPublication> {
             artifactId = project.name
             version = project.version.toString()
             pom {
-                name.set("Edge Agent SDK")
-                description.set(" Edge Agent SDK - Kotlin Multiplatform (Android/JVM)")
-                url.set("https://docs.atalaprism.io/")
+                name.set("SDK")
+                description.set("Identus Kotlin Multiplatform (Android/JVM) SDK")
+                url.set("https://hyperledger-identus.github.io/docs/")
                 organization {
                     name.set("Hyperledger")
                     url.set("https://hyperledger.org/")
@@ -101,9 +91,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:git://hyperledger/identus-edge-agent-sdk-kmp.git")
-                    developerConnection.set("scm:git:ssh://hyperledger/identus-edge-agent-sdk-kmp.git")
-                    url.set("https://github.com/hyperledger/identus-edge-agent-sdk-kmp")
+                    connection.set("scm:git:git://hyperledger-identus/sdk-kmp.git")
+                    developerConnection.set("scm:git:ssh://hyperledger-identus/sdk-kmp.git")
+                    url.set("https://github.com/hyperledger-identus/sdk-kmp")
                 }
             }
         }
@@ -154,7 +144,7 @@ koverReport {
             setReportFile(layout.buildDirectory.file("reports/android/result.xml"))
         }
         html {
-            title = "Wallet SDK - Android"
+            title = "SDK - Android"
             setReportDir(layout.buildDirectory.dir("reports/android/html"))
         }
     }
@@ -333,7 +323,7 @@ sqldelight {
 tasks.withType<DokkaTask>().configureEach {
     moduleName.set(currentModuleName)
     moduleVersion.set(rootProject.version.toString())
-    description = "This is a Kotlin Multiplatform implementation of Edge Agent SDK KMP"
+    description = "This is a Kotlin Multiplatform implementation of Identus SDK KMP"
     dokkaSourceSets {
         configureEach {
             jdkVersion.set(17)
@@ -351,7 +341,7 @@ tasks.withType<DokkaTask>().configureEach {
             )
             sourceLink {
                 localDirectory.set(projectDir.resolve("src"))
-                remoteUrl.set(URL("https://github.com/input-output-hk/atala-prism-wallet-sdk-kmm/tree/main/src"))
+                remoteUrl.set(URL("https://github.com/hyperledger-identus/sdk-kmp/tree/main/src"))
                 remoteLineSuffix.set("#L")
             }
             externalDocumentationLink {

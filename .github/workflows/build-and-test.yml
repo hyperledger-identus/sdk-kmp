@@ -9,9 +9,9 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-  OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-  OSSRH_GPG_SECRET_KEY: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-  OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+  OSSRH_TOKEN: ${{ secrets.OSSRH_PASSWORD }}
+  OSSRH_GPG_SECRET_KEY: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
+  OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
   NODEJS_VERSION: 16.17.0
 
 defaults:
@@ -28,6 +28,7 @@ on:
     branches:
       - "main"
   pull_request:
+  workflow_dispatch:
 
 permissions:
   checks: write
@@ -39,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: "Install Java ${{ env.JAVA_VERSION }}"
         uses: actions/setup-java@v4
@@ -62,17 +63,11 @@ jobs:
       - name: Build for JS, Android, JVM
         run: ./gradlew build allTests koverXmlReportRelease koverHtmlReportRelease --stacktrace
 
-#      - name: Coveralls
-#        uses: coverallsapp/github-action@v2
-#        with:
-#          file: "${{ github.workspace }}/edge-agent-sdk/build/reports/android/result.xml"
-#          github-token: ${{ secrets.IDENTUS_CI }}
-
       - name: Publish test results
         if: always()
         uses: EnricoMi/publish-unit-test-result-action/composite@v2
         with:
-          files: "${{ github.workspace }}/edge-agent-sdk/build/test-results/testReleaseUnitTest/TEST-*.xml"
+          files: "${{ github.workspace }}/sdk/build/test-results/testReleaseUnitTest/TEST-*.xml"
           comment_title: "Unit Test Results"
           check_name: "Unit Test Results"
 
@@ -82,6 +77,6 @@ jobs:
         with:
           name: coverage-results
           path: |
-            edge-agent-sdk/build/reports/jvm
-            edge-agent-sdk/build/reports/android
+            sdk/build/reports/jvm
+            sdk/build/reports/android
           if-no-files-found: error

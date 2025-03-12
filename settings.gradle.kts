@@ -27,7 +27,7 @@ buildscript {
     }
 }
 
-rootProject.name = "edge-agent-sdk"
+rootProject.name = "sdk-kmp"
 include(":protosLib")
-include(":edge-agent-sdk")
+include(":sdk")
 include(":sampleapp")

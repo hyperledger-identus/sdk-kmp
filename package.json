@@ -1,20 +1,20 @@
 {
-  "name": "edge-agent-sdk-kmp",
+  "name": "sdk-kmp",
   "version": "0.0.1",
-  "description": "edge-agent-sdk-kmp",
+  "description": "sdk-kmp",
   "directories": {
     "example": "examples"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hyperledger/identus-edge-agent-sdk-kmp.git"
+    "url": "git+https://github.com/hyperledger-identus/sdk-kmp.git"
   },
   "author": "IOG",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/hyperledger/identus-edge-agent-sdk-kmp/issues"
+    "url": "https://github.com/hyperledger-identus/sdk-kmp/issues"
   },
-  "homepage": "https://github.com/hyperledger/identus-edge-agent-sdk-kmp#readme",
+  "homepage": "https://github.com/hyperledger-identus/sdk-kmp#readme",
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.2",
     "@semantic-release/exec": "^6.0.3",
