@@ -7,7 +7,6 @@ env:
   GITHUB_ACTOR: "hyperledger-bot"
   GITHUB_ACTOR_EMAIL: "hyperledger-bot@hyperledger.org"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
   OSSRH_TOKEN: ${{ secrets.OSSRH_PASSWORD }}
   OSSRH_GPG_SECRET_KEY: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
