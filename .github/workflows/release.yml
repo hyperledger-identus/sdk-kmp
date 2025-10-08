@@ -75,5 +75,6 @@ jobs:
           OSSRH_GPG_SECRET_KEY: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
           OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
         run: |
-          npm install
+          echo "Using npm version: $(npm -v)"
+          npm audit signatures
           npx semantic-release
