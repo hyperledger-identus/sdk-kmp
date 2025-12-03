@@ -4,13 +4,15 @@ val groupId = "org.hyperledger.identus"
 val os: OperatingSystem = OperatingSystem.current()
 
 plugins {
-    id("com.android.library") version "8.1.4" apply false
-    kotlin("jvm") version "1.9.24"
-    kotlin("plugin.serialization") version "1.8.20"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
-    id("org.jetbrains.dokka") version "1.9.20"
-    id("org.jetbrains.kotlin.kapt") version "1.9.10"
-    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
+    alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.kotlinAndroid) apply false
+    alias(libs.plugins.androidApplication) apply false
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.kotlinMultiplatform) apply false
+    alias(libs.plugins.mavenPublish) apply false
+    alias(libs.plugins.dokka) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.ktlint)
 }
 
 buildscript {
@@ -19,12 +21,6 @@ buildscript {
         mavenCentral()
         google()
         gradlePluginPortal()
-    }
-    dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
-        classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.1")
-        classpath("com.squareup.sqldelight:gradle-plugin:1.5.5")
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:0.23.1")
     }
 }
 
@@ -36,24 +32,6 @@ java {
 
 allprojects {
     this.group = groupId
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        google()
-        maven("https://plugins.gradle.org/m2/")
-        // Needed for Kotlin coroutines that support new memory management mode
-        maven {
-            url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
-        }
-        maven {
-            setUrl("https://maven.pkg.github.com/hyperledger/aries-uniffi-wrappers")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
 
     configurations.all {
         resolutionStrategy {
@@ -97,17 +75,6 @@ subprojects {
                     it.file.toString().contains("generated") ||
                     it.file.path.contains("generated")
             }
-        }
-    }
-}
-
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(System.getenv("OSSRH_USERNAME"))
-            password.set(System.getenv("OSSRH_PASSWORD"))
         }
     }
 }

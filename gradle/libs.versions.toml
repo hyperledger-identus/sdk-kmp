@@ -1,0 +1,124 @@
+[versions]
+kotlin = "1.9.20"
+agp = "8.2.2"
+apollo = "1.4.2"
+didpeer = "1.1.2"
+kotlincrypto-hash-sha = "0.4.0"
+didcomm = "0.3.2"
+anoncreds = "0.2.0-wrapper.1"
+bignum = "0.3.9"
+bouncycastle = "1.68"
+sdjwt = "0.4.0"
+jsonld = "1.4.0"
+json = "2.0.1"
+protoc = "3.12.0"
+urdna = "1.3"
+
+ksp = "1.9.20-1.0.14" # pick a KSP in the 1.9.x line; adjust if needed
+ktlint = "12.1.0"
+dokka = "1.9.20"
+sqldelight = "2.0.1"
+protobuf-plugin = "0.9.1"
+vanniktech-maven-publish = "0.28.0"
+
+coroutines = "1.8.1"
+serialization = "1.6.0"
+ktor = "2.3.11"
+datetime = "0.6.0"
+kotlin-kover = "0.7.6"
+
+androidx-core-ktx = "1.7.0"
+androidx-appcompat = "1.6.0"
+androidx-constraintlayout = "2.1.4"
+androidx-navigation = "2.5.3"
+material = "1.8.0"
+lifecycle = "2.3.1"
+room = "2.4.2"
+
+junit4 = "4.13.2"
+androidx-junit = "1.1.5"
+espresso = "3.5.1"
+lighthouse-logging = "1.1.2"
+mockito = "4.4.0"
+mockito-kotlin = "4.0.0"
+
+[libraries]
+# Dependencies
+dependencies-apollo = { module = "org.hyperledger.identus.apollo:apollo", version.ref = "apollo" }
+dependencies-didpeer = { module = "io.iohk.atala.prism.didcomm:didpeer", version.ref = "didpeer" }
+dependencies-kotlincrypto-hash-sha = { module = "org.kotlincrypto.hash:sha2", version.ref = "kotlincrypto-hash-sha" }
+dependencies-didcomm = { module = "org.didcommx:didcomm", version.ref = "didcomm" }
+dependencies-anoncreds = { module = "org.hyperledger:anoncreds_uniffi", version.ref = "anoncreds" }
+dependencies-ionspin-bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "bignum" }
+dependencies-bouncycastle = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
+dependencies-eudi-sdjwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdjwt" }
+dependencies-json-ld = { module = "com.apicatalog:titanium-json-ld-jre8", version.ref = "jsonld" }
+dependencies-json = { module = "org.glassfish:jakarta.json", version.ref = "json" }
+dependencies-protoc = { module = "com.google.protobuf:protoc", version.ref = "protoc"}
+dependencies-setl-rdf-urdna = { module = "io.setl:rdf-urdna", version.ref = "urdna"}
+
+# AndroidX
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "androidx-constraintlayout" }
+androidx-navigation-fragment = { module = "androidx.navigation:navigation-fragment-ktx", version.ref = "androidx-navigation" }
+androidx-navigation-ui = { module = "androidx.navigation:navigation-ui-ktx", version.ref = "androidx-navigation" }
+androidx-material = { module = "com.google.android.material:material", version.ref = "material" }
+androidx-lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+# KotlinX
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime"}
+
+# Ktor
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-websockets = { module = "io.ktor:ktor-websockets", version.ref = "ktor" }
+
+# SqlDelight
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-couroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+# Testing
+junit4 = { module = "junit:junit", version.ref = "junit4" }
+androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }
+androidx-test-espresso = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
+
+lighthouse-logging = { module = "org.lighthousegames:logging", version.ref = "lighthouse-logging" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version = "3.14.0" }
+pbandk-runtime = { module = "pro.streem.pbandk:pbandk-runtime", version = "0.14.2" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary     = { id = "com.android.library",     version.ref = "agp" }
+
+kotlinJvm           = { id = "org.jetbrains.kotlin.jvm",                  version.ref = "kotlin" }
+kotlinAndroid       = { id = "org.jetbrains.kotlin.android",              version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+ksp        = { id = "com.google.devtools.ksp",       version.ref = "ksp" }
+ktlint     = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+dokka      = { id = "org.jetbrains.dokka",           version.ref = "dokka" }
+sqldelight = { id = "app.cash.sqldelight",           version.ref = "sqldelight" }
+protobuf   = { id = "com.google.protobuf",           version.ref = "protobuf-plugin" }
+kotlinKover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kotlin-kover" }
+
+mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
