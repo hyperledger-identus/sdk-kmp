@@ -129,42 +129,6 @@ class ApolloImpl(
         when (keyType) {
             KeyTypes.EC -> {
                 when (curve) {
-                    Curve.ED25519.value -> {
-                        keyData?.let {
-                            if (it !is ByteArray) {
-                                throw ApolloError.InvalidRawData("KeyData must be a ByteArray")
-                            }
-                            return Ed25519PrivateKey(it)
-                        } ?: run {
-                            val seed = properties[SeedKey().property] as String?
-                            val derivationParam = properties[DerivationPathKey().property] as String?
-                            val index = properties[IndexKey().property] as Int?
-
-                            if (seed != null) {
-                                val derivationPath = if (derivationParam != null) {
-                                    DerivationPath.fromPath(derivationParam)
-                                } else if (index is Int) {
-                                    PrismDerivationPath(
-                                        keyPurpose = KeyUsage.MASTER_KEY,
-                                        keyIndex = index
-                                    ).toString().let(DerivationPath::fromPath)
-                                } else {
-                                    throw IllegalArgumentException("When creating a key from `seed`, `DerivationPath` or `Index` must also be sent")
-                                }
-                                val seedBytes = seed.base64UrlDecodedBytes
-                                val hdKey = EdHDKey.initFromSeed(seedBytes).derive(derivationPath.toString())
-                                val key = Ed25519PrivateKey(hdKey.privateKey)
-                                return key
-                            } else {
-                                if (derivationParam.isNullOrBlank() && index == null) {
-                                    throw IllegalArgumentException("When creating a key using `DerivationPath` or `Index`, `Seed` must also be sent")
-                                }
-                                val keyPair = Ed25519KeyPair.generateKeyPair()
-                                return keyPair.privateKey
-                            }
-                        }
-                    }
-
                     Curve.SECP256K1.value -> {
                         keyData?.let {
                             if (it !is ByteArray) {
@@ -205,6 +169,39 @@ class ApolloImpl(
 
             KeyTypes.Curve25519 -> {
                 when (curve) {
+                    Curve.ED25519.value -> {
+                        keyData?.let {
+                            if (it !is ByteArray) {
+                                throw ApolloError.InvalidRawData("KeyData must be a ByteArray")
+                            }
+                            return Ed25519PrivateKey(it)
+                        } ?: run {
+                            val seed = properties[SeedKey().property] as String?
+                            val derivationParam = properties[DerivationPathKey().property] as String?
+                            val index = properties[IndexKey().property] as Int?
+
+                            if (seed != null) {
+                                val derivationPath = if (derivationParam != null) {
+                                    DerivationPath.fromPath(derivationParam)
+                                } else if (index is Int) {
+                                    PrismDerivationPath(
+                                        keyPurpose = KeyUsage.MASTER_KEY,
+                                        keyIndex = index
+                                    ).toString().let(DerivationPath::fromPath)
+                                } else {
+                                    throw IllegalArgumentException("When creating a key from `seed`, `DerivationPath` or `Index` must also be sent")
+                                }
+                                val seedBytes = seed.base64UrlDecodedBytes
+                                val hdKey = EdHDKey.initFromSeed(seedBytes).derive(derivationPath.toString())
+                                val key = Ed25519PrivateKey(hdKey.privateKey)
+                                return key
+                            } else {
+                                val keyPair = Ed25519KeyPair.generateKeyPair()
+                                return keyPair.privateKey
+                            }
+                        }
+                    }
+
                     Curve.X25519.value -> {
                         keyData?.let {
                             if (it !is ByteArray) {
@@ -233,9 +230,6 @@ class ApolloImpl(
                                 val xKey = edkey.x25519PrivateKey()
                                 return X25519PrivateKey(xKey.raw)
                             } else {
-                                if (derivationParam.isNullOrBlank() && index == null) {
-                                    throw IllegalArgumentException("When creating a key using `DerivationPath` or `Index`, `Seed` must also be sent")
-                                }
                                 val keyPair = X25519KeyPair.generateKeyPair()
                                 return keyPair.privateKey
                             }

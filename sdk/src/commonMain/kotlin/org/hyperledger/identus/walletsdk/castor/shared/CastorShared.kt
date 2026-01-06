@@ -30,7 +30,8 @@ import org.hyperledger.identus.walletsdk.castor.did.DIDUrlParser
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.LongFormPrismDID
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.PrismDIDMethodId
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.PrismDIDPublicKey
-import org.hyperledger.identus.walletsdk.castor.did.prismdid.defaultId
+import org.hyperledger.identus.walletsdk.castor.did.prismdid.id
+import org.hyperledger.identus.walletsdk.castor.did.prismdid.toUsage
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
 import org.hyperledger.identus.walletsdk.domain.models.CastorError
 import org.hyperledger.identus.walletsdk.domain.models.Curve
@@ -39,6 +40,7 @@ import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocumentCoreProperty
 import org.hyperledger.identus.walletsdk.domain.models.DIDResolver
 import org.hyperledger.identus.walletsdk.domain.models.DIDUrl
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.OctetPublicKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
@@ -91,27 +93,29 @@ internal class CastorShared {
         @JvmStatic
         internal fun createPrismDID(
             apollo: Apollo,
-            masterPublicKey: PublicKey,
+            keys: List<Pair<KeyPurpose, PublicKey>>,
             services: Array<DIDDocument.Service>?
         ): DID {
+            val grouped: Map<KeyPurpose, List<PublicKey>> =
+                keys.groupBy({ it.first }, { it.second })
+            val publicKeysProto = grouped.flatMap { (purpose, pubKeys) ->
+                pubKeys
+                    .mapIndexed { index, pk ->
+                        val curve = pk.getCurve()
+                        val usage = purpose.toUsage()
+                        PrismDIDPublicKey(
+                            apollo = apollo,
+                            id = usage.id(index),
+                            usage = usage,
+                            keyData = pk
+                        ).toProto()
+                    }
+            }
             val atalaOperation = AtalaOperation(
                 operation = AtalaOperation.Operation.CreateDid(
                     CreateDIDOperation(
                         didData = CreateDIDOperation.DIDCreationData(
-                            publicKeys = listOf(
-                                PrismDIDPublicKey(
-                                    apollo = apollo,
-                                    id = PrismDIDPublicKey.Usage.MASTER_KEY.defaultId(),
-                                    usage = PrismDIDPublicKey.Usage.MASTER_KEY,
-                                    keyData = masterPublicKey
-                                ).toProto(),
-                                PrismDIDPublicKey(
-                                    apollo = apollo,
-                                    id = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.defaultId(),
-                                    usage = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY,
-                                    keyData = masterPublicKey
-                                ).toProto()
-                            ),
+                            publicKeys = publicKeysProto,
                             services = services?.map {
                                 Service(
                                     id = it.id,

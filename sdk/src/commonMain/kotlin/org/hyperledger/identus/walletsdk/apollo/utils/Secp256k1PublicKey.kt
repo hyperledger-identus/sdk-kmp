@@ -32,6 +32,8 @@ import java.security.spec.ECPublicKeySpec
  * @param nativeValue The raw byte array representing the public key.
  */
 class Secp256k1PublicKey(nativeValue: ByteArray) : PublicKey(), VerifiableKey, StorableKey, ExportableKey {
+    constructor(x: ByteArray, y: ByteArray) : this(byteArrayOf(0x04.toByte()) + x + y)
+
     override val type: KeyTypes = KeyTypes.EC
     override val keySpecification: MutableMap<String, String> = mutableMapOf()
     override val size: Int

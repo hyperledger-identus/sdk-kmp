@@ -1,12 +1,16 @@
 package org.hyperledger.identus.walletsdk.castor.did.prismdid
 
-import org.hyperledger.identus.apollo.secp256k1.Secp256k1Lib
+import org.hyperledger.identus.apollo.base64.base64UrlDecodedBytes
 import org.hyperledger.identus.protos.CompressedECKeyData
 import org.hyperledger.identus.protos.KeyUsage
+import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PublicKey
 import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PublicKey
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
 import org.hyperledger.identus.walletsdk.domain.models.CastorError
 import org.hyperledger.identus.walletsdk.domain.models.Curve
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurvePointXKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurvePointYKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import pbandk.ByteArr
 import kotlin.jvm.Throws
@@ -53,12 +57,18 @@ class PrismDIDPublicKey {
         this.id = proto.id
         this.usage = proto.usage.fromProto()
         this.keyData = when (proto.keyData) {
-            is org.hyperledger.identus.protos.PublicKey.KeyData.CompressedEcKeyData -> {
-                Secp256k1PublicKey(proto.keyData.value.data.array)
+            is org.hyperledger.identus.protos.PublicKey.KeyData.CompressedEcKeyData -> when (proto.keyData.value.curve.lowercase()) {
+                "secp256k1" -> Secp256k1PublicKey(proto.keyData.value.data.array)
+                "ed25519" -> Ed25519PublicKey(proto.keyData.value.data.array)
+                else -> throw CastorError.InvalidPublicKeyEncoding("prism", proto.keyData.value.curve)
             }
-
+            is org.hyperledger.identus.protos.PublicKey.KeyData.EcKeyData -> when (proto.keyData.value.curve.lowercase()) {
+                "secp256k1" -> Secp256k1PublicKey(proto.keyData.value.x.array, proto.keyData.value.y.array)
+                "ed25519" -> Ed25519PublicKey(proto.keyData.value.x.array)
+                else -> throw CastorError.InvalidPublicKeyEncoding("prism", proto.keyData.value.curve)
+            }
             else -> {
-                throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
+                throw CastorError.InvalidPublicKeyEncoding("prism", "unknown")
             }
         }
     }
@@ -69,14 +79,42 @@ class PrismDIDPublicKey {
      * @return the converted Protobuf PublicKey object
      */
     fun toProto(): org.hyperledger.identus.protos.PublicKey {
-        val compressedPublicKey = Secp256k1PublicKey(Secp256k1Lib().compressPublicKey(keyData.getValue()))
-        return org.hyperledger.identus.protos.PublicKey(
-            id = id,
-            usage = usage.toProto(),
-            keyData = org.hyperledger.identus.protos.PublicKey.KeyData.CompressedEcKeyData(
-                compressedPublicKey.toProto()
-            )
-        )
+        val curve = keyData.getCurve().lowercase()
+        return when (curve) {
+            Curve.SECP256K1.value.lowercase() -> {
+                val x = keyData.keySpecification[CurvePointXKey().property]?.base64UrlDecodedBytes
+                    ?: throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
+                val y = keyData.keySpecification[CurvePointYKey().property]?.base64UrlDecodedBytes
+                    ?: throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
+                org.hyperledger.identus.protos.PublicKey(
+                    id = id,
+                    usage = usage.toProto(),
+                    keyData = org.hyperledger.identus.protos.PublicKey.KeyData.EcKeyData(
+                        org.hyperledger.identus.protos.ECKeyData(
+                            curve = Curve.SECP256K1.value,
+                            x = ByteArr(x),
+                            y = ByteArr(y)
+                        )
+                    )
+                )
+            }
+
+            Curve.ED25519.value.lowercase() -> {
+                val data = keyData.raw
+                org.hyperledger.identus.protos.PublicKey(
+                    id = id,
+                    usage = usage.toProto(),
+                    keyData = org.hyperledger.identus.protos.PublicKey.KeyData.CompressedEcKeyData(
+                        CompressedECKeyData(
+                            curve = Curve.ED25519.value,
+                            data = ByteArr(data)
+                        )
+                    )
+                )
+            }
+
+            else -> throw CastorError.KeyCurveNotSupported(curve)
+        }
     }
 
     /**
@@ -94,6 +132,23 @@ class PrismDIDPublicKey {
         CAPABILITY_INVOCATION_KEY("capabilityInvocationKey"),
         KEY_AGREEMENT_KEY("keyAgreementKey"),
         UNKNOWN_KEY("unknownKey")
+    }
+}
+
+/**
+ * Converts a `KeyUsage` object to a `PrismDIDPublicKey.Usage` object.
+ *
+ * @return The corresponding `PrismDIDPublicKey.Usage` object.
+ */
+fun KeyPurpose.toUsage(): PrismDIDPublicKey.Usage {
+    return when (this) {
+        KeyPurpose.MASTER -> PrismDIDPublicKey.Usage.MASTER_KEY
+        KeyPurpose.ISSUE -> PrismDIDPublicKey.Usage.ISSUING_KEY
+        KeyPurpose.AUTHENTICATION -> PrismDIDPublicKey.Usage.AUTHENTICATION_KEY
+        KeyPurpose.REVOCATION -> PrismDIDPublicKey.Usage.REVOCATION_KEY
+        KeyPurpose.CAPABILITYDELEGATION -> PrismDIDPublicKey.Usage.CAPABILITY_DELEGATION_KEY
+        KeyPurpose.CAPABILITYINVOCATION -> PrismDIDPublicKey.Usage.CAPABILITY_INVOCATION_KEY
+        KeyPurpose.AGREEMENT -> PrismDIDPublicKey.Usage.KEY_AGREEMENT_KEY
     }
 }
 
@@ -140,8 +195,8 @@ fun PrismDIDPublicKey.Usage.id(index: Int): String {
         PrismDIDPublicKey.Usage.ISSUING_KEY -> "issuing$index"
         PrismDIDPublicKey.Usage.AUTHENTICATION_KEY -> "authentication$index"
         PrismDIDPublicKey.Usage.REVOCATION_KEY -> "revocation$index"
-        PrismDIDPublicKey.Usage.CAPABILITY_DELEGATION_KEY -> "capabilityDelegation$index"
-        PrismDIDPublicKey.Usage.CAPABILITY_INVOCATION_KEY -> "capabilityInvocation$index"
+        PrismDIDPublicKey.Usage.CAPABILITY_DELEGATION_KEY -> "capability-delegationKey$index"
+        PrismDIDPublicKey.Usage.CAPABILITY_INVOCATION_KEY -> "capability-invocationKey$index"
         PrismDIDPublicKey.Usage.KEY_AGREEMENT_KEY -> "keyAgreement$index"
         PrismDIDPublicKey.Usage.UNKNOWN_KEY -> "unknown$index"
     }

@@ -4,6 +4,7 @@ import org.hyperledger.identus.walletsdk.domain.models.CastorError
 import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocumentCoreProperty
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 
@@ -23,6 +24,19 @@ interface Castor {
      */
     @Throws(CastorError.InvalidDIDString::class)
     fun parseDID(did: String): DID
+
+    /**
+     * Creates a DID for a prism (a device or server that acts as a DID owner and controller) using a
+     * given master public key and list of services.
+     *
+     * @param keys The list of keys with purposes
+     * @param services The list of services offered by the prism
+     * @return [DID]
+     */
+    fun createPrismDID(
+        keys: List<Pair<KeyPurpose, PublicKey>>,
+        services: Array<DIDDocument.Service>?
+    ): DID
 
     /**
      * Creates a DID for a prism (a device or server that acts as a DID owner and controller) using a
