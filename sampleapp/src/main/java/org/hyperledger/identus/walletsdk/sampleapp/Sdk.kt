@@ -59,7 +59,14 @@ class Sdk {
             }
         }
 
-        (pluto as PlutoImpl).start(context)
+        try {
+            (pluto as PlutoImpl).start(context)
+        } catch (e: Exception) {
+            // Ignore if already running
+            if (e.javaClass.name != "org.hyperledger.identus.walletsdk.domain.models.PlutoError\$DatabaseServiceAlreadyRunning") {
+                throw e
+            }
+        }
         agent.start()
         try {
             agent.startFetchingMessages()

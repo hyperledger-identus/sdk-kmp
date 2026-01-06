@@ -199,7 +199,7 @@ class DIDCreateTest {
         )
 
         val properties2: MutableMap<String, Any> = mutableMapOf()
-        properties2[TypeKey().property] = KeyTypes.EC
+        properties2[TypeKey().property] = KeyTypes.Curve25519
         properties2[RawKey().property] = "JLIJQ5jlkyqtGmtOth6yggJLLC0zuRhUPiBhd1-rGPs".base64UrlDecodedBytes
         properties2[CurveKey().property] = Curve.ED25519.value
         val authenticationPrivateKey = apollo.createPrivateKey(properties2)

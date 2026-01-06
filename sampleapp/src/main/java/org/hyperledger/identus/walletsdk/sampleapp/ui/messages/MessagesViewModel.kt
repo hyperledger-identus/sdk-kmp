@@ -19,11 +19,16 @@ import org.hyperledger.identus.walletsdk.domain.models.AnoncredsInputFieldFilter
 import org.hyperledger.identus.walletsdk.domain.models.AnoncredsPresentationClaims
 import org.hyperledger.identus.walletsdk.domain.models.Credential
 import org.hyperledger.identus.walletsdk.domain.models.CredentialType
+import org.hyperledger.identus.walletsdk.domain.models.Curve
 import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.Message
 import org.hyperledger.identus.walletsdk.domain.models.ProvableCredential
 import org.hyperledger.identus.walletsdk.domain.models.RequestedAttributes
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurveKey
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyTypes
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.TypeKey
 import org.hyperledger.identus.walletsdk.edgeagent.DIDCOMM1
 import org.hyperledger.identus.walletsdk.edgeagent.EdgeAgentError
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.ProtocolType
@@ -139,9 +144,7 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun proofRequestToProcess(): LiveData<Pair<Message, List<Credential>>> {
-        return proofRequestToProcess
-    }
+    fun proofRequestToProcess(): LiveData<Pair<Message, List<Credential>>> = proofRequestToProcess
 
     fun preparePresentationProof(credential: Credential, message: Message) {
         val sdk = Sdk.getInstance()
@@ -204,9 +207,7 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
         return liveData
     }
 
-    fun streamError(): LiveData<String> {
-        return errorLiveData
-    }
+    fun streamError(): LiveData<String> = errorLiveData
 
     private suspend fun processMessages(messages: List<Message>) {
         val sdk = Sdk.getInstance()
@@ -224,7 +225,13 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
                                         processedOffers.add(it)
                                         viewModelScope.launch {
                                             val offer = OfferCredential.fromMessage(message)
-                                            val subjectDID = agent.createNewPrismDID()
+                                            val authenticationKey = agent.apollo.createPrivateKey(
+                                                mapOf(
+                                                    TypeKey().property to KeyTypes.Curve25519,
+                                                    CurveKey().property to Curve.ED25519.value,
+                                                )
+                                            )
+                                            val subjectDID = agent.createNewPrismDID(keys = listOf(Pair(KeyPurpose.AUTHENTICATION, authenticationKey)))
                                             val request =
                                                 agent.prepareRequestCredentialWithIssuer(
                                                     subjectDID,

@@ -7,7 +7,6 @@ import anoncreds_uniffi.CredentialOffer
 import anoncreds_uniffi.CredentialRequest
 import anoncreds_uniffi.CredentialRequestMetadata
 import anoncreds_uniffi.Schema
-import java.security.interfaces.ECPublicKey
 import kotlinx.serialization.json.JsonObject
 import org.hyperledger.identus.walletsdk.domain.models.AttachmentDescriptor
 import org.hyperledger.identus.walletsdk.domain.models.Credential
@@ -19,6 +18,7 @@ import org.hyperledger.identus.walletsdk.domain.models.StorableCredential
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PrivateKey
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationSubmissionOptions
+import java.security.PublicKey
 
 /**
  * The `Pollux` interface represents a set of operations for working with verifiable credentials.
@@ -173,7 +173,7 @@ interface Pollux {
         options: PresentationSubmissionOptions
     ): Boolean
 
-    suspend fun extractEcPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<ECPublicKey>
+    suspend fun extractEcPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey>
 
     suspend fun isCredentialRevoked(credential: Credential): Boolean
 }

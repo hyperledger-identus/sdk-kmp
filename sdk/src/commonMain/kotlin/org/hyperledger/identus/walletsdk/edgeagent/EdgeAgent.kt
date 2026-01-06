@@ -72,6 +72,7 @@ import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDPair
 import org.hyperledger.identus.walletsdk.domain.models.KeyCurve
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.Message
 import org.hyperledger.identus.walletsdk.domain.models.PeerDID
 import org.hyperledger.identus.walletsdk.domain.models.PolluxError
@@ -130,12 +131,10 @@ import org.kotlincrypto.hash.sha2.SHA256
  * @param str string to check its URL validity
  * @return [Url] if valid, null if not valid
  */
-private fun Url.Companion.parse(str: String): Url? {
-    return try {
-        Url(str)
-    } catch (e: Throwable) {
-        null
-    }
+private fun Url.Companion.parse(str: String): Url? = try {
+    Url(str)
+} catch (e: Throwable) {
+    null
 }
 
 /**
@@ -294,6 +293,7 @@ open class EdgeAgent {
     }
 
     // Prism agent actions
+
     /**
      * Start the [EdgeAgent] and Mediator services.
      *
@@ -356,6 +356,7 @@ open class EdgeAgent {
     }
 
     // DID Higher Functions
+
     /**
      * This method create a new Prism DID, that can be used to identify the agent and interact with other agents.
      *
@@ -373,7 +374,35 @@ open class EdgeAgent {
         val index = keyPathIndex ?: (pluto.getPrismLastKeyPathIndex().first() + 1)
         val keyPair = Secp256k1KeyPair.generateKeyPair(seed, KeyCurve(Curve.SECP256K1, index))
         val did = castor.createPrismDID(masterPublicKey = keyPair.publicKey, services = services)
-        registerPrismDID(did, index, alias, keyPair.privateKey)
+        registerPrismDID(did, index, alias, listOf(keyPair.privateKey))
+        return did
+    }
+
+    /**
+     * This method create a new Prism DID, that can be used to identify the agent and interact with other agents.
+     *
+     * @param keyPathIndex key path index used to identify the DID.
+     * @param alias An alias that can be used to identify the DID.
+     * @param services an array of services associated to the DID.
+     * @return The new created [DID]
+     */
+    @JvmOverloads
+    suspend fun createNewPrismDID(
+        keys: List<Pair<KeyPurpose, PrivateKey>>,
+        keyPathIndex: Int? = null,
+        alias: String? = null,
+        services: Array<DIDDocument.Service> = emptyArray()
+    ): DID {
+        if (keys.any { it.first == KeyPurpose.MASTER }) {
+            throw EdgeAgentError.CannotFindDIDPrivateKey("")
+        }
+        val finalKeys = keys.toMutableList()
+        val index = keyPathIndex ?: (pluto.getPrismLastKeyPathIndex().first() + 1)
+        val keyPair = Secp256k1KeyPair.generateKeyPair(seed, KeyCurve(Curve.SECP256K1, index))
+        finalKeys.add(Pair(KeyPurpose.MASTER, keyPair.privateKey))
+
+        val did = castor.createPrismDID(finalKeys.map { Pair(it.first, it.second.publicKey()) }, services)
+        registerPrismDID(did, index, alias, finalKeys.map { it.second })
         return did
     }
 
@@ -389,13 +418,13 @@ open class EdgeAgent {
         did: DID,
         keyPathIndex: Int,
         alias: String? = null,
-        privateKey: PrivateKey
+        privateKeys: List<PrivateKey>
     ) {
         pluto.storePrismDIDAndPrivateKeys(
             did = did,
             keyPathIndex = keyPathIndex,
             alias = alias ?: did.alias,
-            listOf(privateKey as StorableKey)
+            privateKeys.map { it as StorableKey }
         )
     }
 
@@ -548,10 +577,8 @@ open class EdgeAgent {
      * @param did The DID to fetch the info for
      * @return A PrismDIDInfo if existent, null otherwise
      */
-    suspend fun getDIDInfo(did: DID): PrismDIDInfo? {
-        return pluto.getDIDInfoByDID(did)
-            .first()
-    }
+    suspend fun getDIDInfo(did: DID): PrismDIDInfo? = pluto.getDIDInfoByDID(did)
+        .first()
 
     /**
      * This method registers a DID pair into the local database.
@@ -567,18 +594,14 @@ open class EdgeAgent {
      *
      * @return A list of the store DID pair
      */
-    suspend fun getAllDIDPairs(): List<DIDPair> {
-        return pluto.getAllDidPairs().first()
-    }
+    suspend fun getAllDIDPairs(): List<DIDPair> = pluto.getAllDidPairs().first()
 
     /**
      * This method returns all registered PeerDIDs.
      *
      * @return A list of the stored PeerDIDs
      */
-    suspend fun getAllRegisteredPeerDIDs(): List<PeerDID> {
-        return pluto.getAllPeerDIDs().first()
-    }
+    suspend fun getAllRegisteredPeerDIDs(): List<PeerDID> = pluto.getAllPeerDIDs().first()
 
     // Messages related actions
 
@@ -588,9 +611,7 @@ open class EdgeAgent {
      * @param message The message to be sent
      * @return The message sent if successful, null otherwise
      */
-    suspend fun sendMessage(message: Message): Message? {
-        return connectionManager.sendMessage(message)
-    }
+    suspend fun sendMessage(message: Message): Message? = connectionManager.sendMessage(message)
 
     // Credentials related actions
 
@@ -663,6 +684,37 @@ open class EdgeAgent {
                 val offerJsonObject = Json.parseToJsonElement(offerDataString).jsonObject
                 val jwtString =
                     pollux.processCredentialRequestJWT(did, keyPair.privateKey, offerJsonObject)
+                val attachmentDescriptor =
+                    AttachmentDescriptor(
+                        mediaType = ContentType.Application.Json.toString(),
+                        format = CredentialType.JWT.type,
+                        data = AttachmentBase64(jwtString.base64UrlEncoded)
+                    )
+                return RequestCredential(
+                    from = offer.to,
+                    to = offer.from,
+                    thid = offer.thid,
+                    body = RequestCredential.Body(
+                        offer.body.goalCode,
+                        offer.body.comment
+                    ),
+                    attachments = arrayOf(attachmentDescriptor)
+                )
+            }
+
+            CredentialType.SDJWT -> {
+                val storedPrivateKeys = pluto.getDIDPrivateKeysByDID(did).first().mapNotNull { it }
+                val keys = storedPrivateKeys.map { apollo.restorePrivateKey(it.restorationIdentifier, it.data) }
+                val key = keys.find { it.getCurve().lowercase() == "ed25519" }
+                if (key == null) {
+                    throw EdgeAgentError.CannotFindDIDPrivateKey(did.toString())
+                }
+                val offerDataString = offer.attachments.firstNotNullOf {
+                    it.data.getDataAsJsonString()
+                }
+                val offerJsonObject = Json.parseToJsonElement(offerDataString).jsonObject
+                val jwtString =
+                    pollux.processCredentialRequestJWT(did, key, offerJsonObject)
                 val attachmentDescriptor =
                     AttachmentDescriptor(
                         mediaType = ContentType.Application.Json.toString(),
@@ -777,6 +829,7 @@ open class EdgeAgent {
     }
 
 // Message Events
+
     /**
      * Start fetching the messages from the mediator.
      */
@@ -798,20 +851,17 @@ open class EdgeAgent {
      *
      * @return [Flow] of [Message].
      */
-    fun handleMessagesEvents(): Flow<List<Message>> {
-        return pluto.getAllMessages()
-    }
+    fun handleMessagesEvents(): Flow<List<Message>> = pluto.getAllMessages()
 
     /**
      * Handles the received messages events and return a publisher of the messages.
      *
      * @return [Flow] of [Message].
      */
-    fun handleReceivedMessagesEvents(): Flow<List<Message>> {
-        return pluto.getAllMessagesReceived()
-    }
+    fun handleReceivedMessagesEvents(): Flow<List<Message>> = pluto.getAllMessagesReceived()
 
 // Invitation functionalities
+
     /**
      * Parses the given string as an invitation
      * @param str The string to parse
@@ -893,12 +943,10 @@ open class EdgeAgent {
      * @throws [SerializationException] if Serialization failed
      */
     @Throws(SerializationException::class)
-    private fun parseOOBInvitation(str: String): OutOfBandInvitation {
-        return try {
-            Json.decodeFromString(str)
-        } catch (ex: SerializationException) {
-            throw ex
-        }
+    private fun parseOOBInvitation(str: String): OutOfBandInvitation = try {
+        Json.decodeFromString(str)
+    } catch (ex: SerializationException) {
+        throw ex
     }
 
     /**
@@ -907,9 +955,7 @@ open class EdgeAgent {
      * @return The parsed Out-of-Band invitation
      * @throws [EdgeAgentError.UnknownInvitationTypeError] if the URL is not a valid Out-of-Band invitation
      */
-    private fun parseOOBInvitation(url: Url): OutOfBandInvitation {
-        return DIDCommInvitationRunner(url).run()
-    }
+    private fun parseOOBInvitation(url: Url): OutOfBandInvitation = DIDCommInvitationRunner(url).run()
 
     /**
      * Accepts an Out-of-Band (DIDComm), verifies if it contains attachments or not. If it does contain attachments
@@ -950,14 +996,12 @@ open class EdgeAgent {
     /**
      * This method returns a list of all the VerifiableCredentials stored locally.
      */
-    fun getAllCredentials(): Flow<List<Credential>> {
-        return pluto.getAllCredentials()
-            .map { list ->
-                list.map {
-                    pollux.restoreCredential(it.restorationId, it.credentialData, it.revoked)
-                }
+    fun getAllCredentials(): Flow<List<Credential>> = pluto.getAllCredentials()
+        .map { list ->
+            list.map {
+                pollux.restoreCredential(it.restorationId, it.credentialData, it.revoked)
             }
-    }
+        }
 
 // Proof related actions
 
@@ -1041,10 +1085,11 @@ open class EdgeAgent {
                 val requestData = request.attachments.firstNotNullOf {
                     it.data.getDataAsJsonString()
                 }
+                val claims = credential.claims.map { it.key }
                 try {
                     presentationString = credential.presentation(
                         requestData.encodeToByteArray(),
-                        listOf(CredentialOperationsOptions.DisclosingClaims(listOf(credential.claims.toString())))
+                        listOf(CredentialOperationsOptions.DisclosingClaims(claims))
                     )
                 } catch (e: Exception) {
                     throw EdgeAgentError.CredentialNotValidForPresentationRequest()
@@ -1262,14 +1307,12 @@ open class EdgeAgent {
      * This method provides a channel to listen for credentials that are revoked. As long as there is an
      * observer collecting from this flow the updates will keep happening.
      */
-    fun observeRevokedCredentials(): Flow<List<Credential>> {
-        return pluto.observeRevokedCredentials()
-            .map { list ->
-                list.map {
-                    pollux.restoreCredential(it.restorationId, it.credentialData, it.revoked)
-                }
+    fun observeRevokedCredentials(): Flow<List<Credential>> = pluto.observeRevokedCredentials()
+        .map { list ->
+            list.map {
+                pollux.restoreCredential(it.restorationId, it.credentialData, it.revoked)
             }
-    }
+        }
 
     suspend fun isCredentialRevoked(credential: Credential) {
         edgeAgentScope.launch {
@@ -1378,19 +1421,17 @@ open class EdgeAgent {
      * @return The generated X25519PrivateKey.
      * @throws UnknownError.SomethingWentWrongError if an exception occurs during the private key generation.
      */
-    private fun createX25519PrivateKeyFrom(seed: Seed, derivationPath: String = "m/0'/0'/0'"): X25519PrivateKey {
-        return try {
-            apollo.createPrivateKey(
-                mapOf(
-                    TypeKey().property to KeyTypes.Curve25519,
-                    CurveKey().property to Curve.X25519.value,
-                    SeedKey().property to seed.value.base64UrlEncoded,
-                    DerivationPathKey().property to derivationPath
-                )
-            ) as X25519PrivateKey
-        } catch (ex: Exception) {
-            throw UnknownError.SomethingWentWrongError(ex.localizedMessage, ex)
-        }
+    private fun createX25519PrivateKeyFrom(seed: Seed, derivationPath: String = "m/0'/0'/0'"): X25519PrivateKey = try {
+        apollo.createPrivateKey(
+            mapOf(
+                TypeKey().property to KeyTypes.Curve25519,
+                CurveKey().property to Curve.X25519.value,
+                SeedKey().property to seed.value.base64UrlEncoded,
+                DerivationPathKey().property to derivationPath
+            )
+        ) as X25519PrivateKey
+    } catch (ex: Exception) {
+        throw UnknownError.SomethingWentWrongError(ex.localizedMessage, ex)
     }
 
     /**

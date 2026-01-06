@@ -7,7 +7,6 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEObject
 import io.ktor.http.HttpStatusCode
-import java.security.interfaces.ECPublicKey
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.flow
@@ -63,6 +62,7 @@ import org.hyperledger.identus.walletsdk.domain.models.Signature
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurveKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.DerivationPathKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyTypes
+import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.SeedKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.StorablePrivateKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.TypeKey
@@ -432,109 +432,105 @@ class EdgeAgentTests {
     }
 
     @Test
-    fun testPrismAgentOnboardingInvitation_shouldAcceptOnboardingInvitation_whenStatusIs200() =
-        runTest {
-            val agent = EdgeAgent(
-                apollo = apolloMockOld,
-                castor = castorMockOld,
-                pluto = plutoMockOld,
-                mercury = mercuryMockOld,
-                pollux = polluxMockOld,
-                connectionManager = connectionManagerOld,
-                seed = null,
-                api = ApiMock(HttpStatusCode.OK, "{\"success\":\"true\"}"),
-                logger = LoggerMock()
-            )
-            val invitationString = """
+    fun testPrismAgentOnboardingInvitation_shouldAcceptOnboardingInvitation_whenStatusIs200() = runTest {
+        val agent = EdgeAgent(
+            apollo = apolloMockOld,
+            castor = castorMockOld,
+            pluto = plutoMockOld,
+            mercury = mercuryMockOld,
+            pollux = polluxMockOld,
+            connectionManager = connectionManagerOld,
+            seed = null,
+            api = ApiMock(HttpStatusCode.OK, "{\"success\":\"true\"}"),
+            logger = LoggerMock()
+        )
+        val invitationString = """
             {
                 "type":"${ProtocolType.PrismOnboarding.value}",
                 "onboardEndpoint":"http://localhost/onboarding",
                 "from":"did:prism:b6c0c33d701ac1b9a262a14454d1bbde3d127d697a76950963c5fd930605:Cj8KPRI7CgdtYXN0ZXIwEAFKLgoJc2VmsxEiECSTjyV7sUfCr_ArpN9rvCwR9fRMAhcsr_S7ZRiJk4p5k"
             }
         """
-            val invitation = agent.parseInvitation(invitationString)
-            assertEquals(PrismOnboardingInvitation::class, invitation::class)
+        val invitation = agent.parseInvitation(invitationString)
+        assertEquals(PrismOnboardingInvitation::class, invitation::class)
+        agent.acceptInvitation(invitation as PrismOnboardingInvitation)
+    }
+
+    @Test
+    fun testPrismAgentOnboardingInvitation_shouldRejectOnboardingInvitation_whenStatusIsNot200() = runTest {
+        val api = ApiMock(HttpStatusCode.BadRequest, "{\"success\":\"true\"}")
+        val agent = EdgeAgent(
+            apollo = apolloMockOld,
+            castor = castorMockOld,
+            pluto = plutoMockOld,
+            mercury = mercuryMockOld,
+            pollux = polluxMockOld,
+            connectionManager = connectionManagerOld,
+            seed = null,
+            api = api,
+            logger = LoggerMock()
+        )
+        val invitationString = """
+            {
+                "type":"${ProtocolType.PrismOnboarding.value}",
+                "onboardEndpoint":"http://localhost/onboarding",
+                "from":"did:prism:b6c0c33d701ac1b9a262a14454d1bbde3d127d697a76950963c5fd930605:Cj8KPRI7CgdtYXN0ZXIwEAFKLgoJc2VmsxEiECSTjyV7sUfCr_ArpN9rvCwR9fRMAhcsr_S7ZRiJk4p5k"
+            }
+        """
+        val invitation = agent.parseInvitation(invitationString)
+        assertFailsWith<EdgeAgentError.FailedToOnboardError> {
             agent.acceptInvitation(invitation as PrismOnboardingInvitation)
         }
+    }
 
     @Test
-    fun testPrismAgentOnboardingInvitation_shouldRejectOnboardingInvitation_whenStatusIsNot200() =
-        runTest {
-            val api = ApiMock(HttpStatusCode.BadRequest, "{\"success\":\"true\"}")
-            val agent = EdgeAgent(
-                apollo = apolloMockOld,
-                castor = castorMockOld,
-                pluto = plutoMockOld,
-                mercury = mercuryMockOld,
-                pollux = polluxMockOld,
-                connectionManager = connectionManagerOld,
-                seed = null,
-                api = api,
-                logger = LoggerMock()
-            )
-            val invitationString = """
-            {
-                "type":"${ProtocolType.PrismOnboarding.value}",
-                "onboardEndpoint":"http://localhost/onboarding",
-                "from":"did:prism:b6c0c33d701ac1b9a262a14454d1bbde3d127d697a76950963c5fd930605:Cj8KPRI7CgdtYXN0ZXIwEAFKLgoJc2VmsxEiECSTjyV7sUfCr_ArpN9rvCwR9fRMAhcsr_S7ZRiJk4p5k"
-            }
-        """
-            val invitation = agent.parseInvitation(invitationString)
-            assertFailsWith<EdgeAgentError.FailedToOnboardError> {
-                agent.acceptInvitation(invitation as PrismOnboardingInvitation)
-            }
-        }
-
-    @Test
-    fun testPrismAgentOnboardingInvitation_shouldRejectOnboardingInvitation_whenBodyIsWrong() =
-        runTest {
-            val agent = EdgeAgent(
-                apollo = apolloMockOld,
-                castor = castorMockOld,
-                pluto = plutoMockOld,
-                mercury = mercuryMockOld,
-                pollux = polluxMockOld,
-                connectionManager = connectionManagerOld,
-                seed = null,
-                api = ApiMock(HttpStatusCode.OK, "{\"success\":\"true\"}"),
-                logger = LoggerMock()
-            )
-            val invitationString = """
+    fun testPrismAgentOnboardingInvitation_shouldRejectOnboardingInvitation_whenBodyIsWrong() = runTest {
+        val agent = EdgeAgent(
+            apollo = apolloMockOld,
+            castor = castorMockOld,
+            pluto = plutoMockOld,
+            mercury = mercuryMockOld,
+            pollux = polluxMockOld,
+            connectionManager = connectionManagerOld,
+            seed = null,
+            api = ApiMock(HttpStatusCode.OK, "{\"success\":\"true\"}"),
+            logger = LoggerMock()
+        )
+        val invitationString = """
             {
                 "type":"${ProtocolType.PrismOnboarding.value}",
                 "errorField":"http://localhost/onboarding",
                 "from":"did:prism:b6c0c33d701ac1b9a262a14454d1bbde3d127d697a76950963c5fd930605:Cj8KPRI7CgdtYXN0ZXIwEAFKLgoJc2VmsxEiECSTjyV7sUfCr_ArpN9rvCwR9fRMAhcsr_S7ZRiJk4p5k"
             }
         """
-            assertFailsWith<org.hyperledger.identus.walletsdk.domain.models.UnknownError.SomethingWentWrongError> {
-                agent.parseInvitation(invitationString)
-            }
+        assertFailsWith<org.hyperledger.identus.walletsdk.domain.models.UnknownError.SomethingWentWrongError> {
+            agent.parseInvitation(invitationString)
         }
+    }
 
     @Test
-    fun testPrismAgentSignWith_whenNoPrivateKeyAvailable_thenThrowCannotFindDIDPrivateKey() =
-        runTest {
-            val agent = EdgeAgent(
-                apollo = apolloMockOld,
-                castor = castorMockOld,
-                pluto = plutoMockOld,
-                mercury = mercuryMockOld,
-                pollux = polluxMockOld,
-                connectionManager = connectionManagerOld,
-                seed = null,
-                api = null,
-                logger = LoggerMock()
-            )
+    fun testPrismAgentSignWith_whenNoPrivateKeyAvailable_thenThrowCannotFindDIDPrivateKey() = runTest {
+        val agent = EdgeAgent(
+            apollo = apolloMockOld,
+            castor = castorMockOld,
+            pluto = plutoMockOld,
+            mercury = mercuryMockOld,
+            pollux = polluxMockOld,
+            connectionManager = connectionManagerOld,
+            seed = null,
+            api = null,
+            logger = LoggerMock()
+        )
 
-            plutoMockOld.getDIDPrivateKeysReturn = flow { emit(listOf(null)) }
+        plutoMockOld.getDIDPrivateKeysReturn = flow { emit(listOf(null)) }
 
-            val did = DID("did", "peer", "asdf1234asdf1234")
-            val messageString = "This is a message"
-            assertFalse { plutoMockOld.wasGetDIDPrivateKeysByDIDCalled }
-            assertFailsWith(EdgeAgentError.CannotFindDIDPrivateKey::class, null) {
-                agent.signWith(did, messageString.toByteArray())
-            }
+        val did = DID("did", "peer", "asdf1234asdf1234")
+        val messageString = "This is a message"
+        assertFalse { plutoMockOld.wasGetDIDPrivateKeysByDIDCalled }
+        assertFailsWith(EdgeAgentError.CannotFindDIDPrivateKey::class, null) {
+            agent.signWith(did, messageString.toByteArray())
         }
+    }
 
     @Test
     fun testPrismAgentSignWith_whenSecp256k1PrivateKey_thenSignatureReturned() = runTest {
@@ -711,21 +707,20 @@ class EdgeAgentTests {
     }
 
     @Test
-    fun testParseInvitation_whenOutOfBandWrongBody_thenThrowsUnknownInvitationTypeError() =
-        runTest {
-            val agent = EdgeAgent(
-                apollo = apolloMockOld,
-                castor = castorMockOld,
-                pluto = plutoMockOld,
-                mercury = mercuryMockOld,
-                pollux = polluxMockOld,
-                connectionManager = connectionManagerOld,
-                seed = null,
-                api = null,
-                logger = LoggerMock()
-            )
+    fun testParseInvitation_whenOutOfBandWrongBody_thenThrowsUnknownInvitationTypeError() = runTest {
+        val agent = EdgeAgent(
+            apollo = apolloMockOld,
+            castor = castorMockOld,
+            pluto = plutoMockOld,
+            mercury = mercuryMockOld,
+            pollux = polluxMockOld,
+            connectionManager = connectionManagerOld,
+            seed = null,
+            api = null,
+            logger = LoggerMock()
+        )
 
-            val invitationString = """
+        val invitationString = """
             {
               "type": "https://didcomm.org/out-of-band/2.0/invitation",
               "id": "1234-1234-1234-1234",
@@ -734,10 +729,10 @@ class EdgeAgentTests {
             }
         """
 
-            assertFailsWith<SerializationException> {
-                agent.parseInvitation(invitationString.trim())
-            }
+        assertFailsWith<SerializationException> {
+            agent.parseInvitation(invitationString.trim())
         }
+    }
 
     @Test
     fun testStartPrismAgent_whenCalled_thenStatusIsRunning() = runTest {
@@ -1227,324 +1222,319 @@ class EdgeAgentTests {
     }
 
     @Test
-    fun testHandlePresentationDefinitionRequest_whenNotSupportedCredential_thenThrowInvalidCredentialError() =
-        runTest {
-            val apiMock = mock<Api>()
-            `when`(apiMock.request(any(), any(), any(), any(), any()))
-                .thenReturn(HttpResponse(200, "Ok"))
+    fun testHandlePresentationDefinitionRequest_whenNotSupportedCredential_thenThrowInvalidCredentialError() = runTest {
+        val apiMock = mock<Api>()
+        `when`(apiMock.request(any(), any(), any(), any(), any()))
+            .thenReturn(HttpResponse(200, "Ok"))
 
-            val apolloMock = mock<Apollo>()
-            val castorMock = mock<Castor>()
-            val plutoMock = mock<Pluto>()
-            val mercuryMock = mock<Mercury>()
-            val polluxMock = mock<Pollux>()
-            val connectionManagerMock = mock<ConnectionManager>()
+        val apolloMock = mock<Apollo>()
+        val castorMock = mock<Castor>()
+        val plutoMock = mock<Pluto>()
+        val mercuryMock = mock<Mercury>()
+        val polluxMock = mock<Pollux>()
+        val connectionManagerMock = mock<ConnectionManager>()
 
-            val mediatorHandlerMock = mock<MediationHandler>()
-            `when`(connectionManagerMock.mediationHandler).thenReturn(mediatorHandlerMock)
-            val mediator = Mediator(
-                id = UUID.randomUUID().toString(),
-                mediatorDID = DID("did:peer:mediatordid"),
-                hostDID = DID("did:peer:hostdid"),
-                routingDID = DID("did:peer:routingdid")
-            )
-            `when`(mediatorHandlerMock.mediator).thenReturn(mediator)
+        val mediatorHandlerMock = mock<MediationHandler>()
+        `when`(connectionManagerMock.mediationHandler).thenReturn(mediatorHandlerMock)
+        val mediator = Mediator(
+            id = UUID.randomUUID().toString(),
+            mediatorDID = DID("did:peer:mediatordid"),
+            hostDID = DID("did:peer:hostdid"),
+            routingDID = DID("did:peer:routingdid")
+        )
+        `when`(mediatorHandlerMock.mediator).thenReturn(mediator)
 
-            val agent = EdgeAgent(
-                apollo = apolloMock,
-                castor = castorMock,
-                pluto = plutoMock,
-                mercury = mercuryMock,
-                pollux = polluxMock,
-                connectionManager = connectionManagerMock,
-                seed = seed,
-                api = apiMock,
-                logger = LoggerMock()
-            )
-            val msg = Json.decodeFromString<Message>(
-                "{\"id\":\"00000000-685c-4004-0000-000036ac64ee\",\"piuri\":\"https://didcomm.atalaprism.io/present-proof/3.0/request-presentation\",\"from\":{\"method\":\"peer\",\"methodId\":\"asdfasdf\"},\"to\":{\"method\":\"peer\",\"methodId\":\"fdsafdsa\"},\"fromPrior\":null,\"body\":\"{}\",\"createdTime\":\"2024-03-08T19:27:38.196506Z\",\"expiresTimePlus\":\"2024-03-09T19:27:38.196559Z\",\"attachments\":[{\"id\":\"00000000-9c2e-4249-0000-0000c1176949\",\"mediaType\":\"application/json\",\"data\":{\"type\":\"org.hyperledger.identus.walletsdk.domain.models.AttachmentBase64\",\"base64\":\"eyJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjMyZjU0MTYzLTcxNjYtNDhmMS05M2Q4LWZmMjE3YmRiMDY1MyIsImlucHV0X2Rlc2NyaXB0b3JzIjpbeyJpZCI6IndhX2RyaXZlcl9saWNlbnNlIiwibmFtZSI6Ildhc2hpbmd0b24gU3RhdGUgQnVzaW5lc3MgTGljZW5zZSIsInB1cnBvc2UiOiJXZSBjYW4gb25seSBhbGxvdyBsaWNlbnNlZCBXYXNoaW5ndG9uIFN0YXRlIGJ1c2luZXNzIHJlcHJlc2VudGF0aXZlcyBpbnRvIHRoZSBXQSBCdXNpbmVzcyBDb25mZXJlbmNlIiwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiIsIiQudmMuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLnZjLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiJdfV19fV0sImZvcm1hdCI6eyJqd3QiOnsiYWxnIjpbIkVTMjU2SyJdfX19LCAib3B0aW9ucyI6IHsiZG9tYWluIjogImRvbWFpbiIsICJjaGFsbGVuZ2UiOiAiY2hhbGxlbmdlIn19\"},\"format\":\"dif/presentation-exchange/fail_test@v1.0\"}],\"thid\":\"00000000-ef9d-4722-0000-00003b1bc908\",\"ack\":[]}"
-            )
-            val credential = AnonCredential(
-                schemaID = "",
-                credentialDefinitionID = "",
-                values = mapOf(),
-                signatureJson = "",
-                signatureCorrectnessProofJson = "",
-                revocationRegistryId = null,
-                revocationRegistryJson = null,
-                witnessJson = "",
-                json = ""
-            )
-            assertFailsWith(EdgeAgentError.InvalidCredentialError::class) {
-                agent.preparePresentationForRequestProof(
-                    RequestPresentation.fromMessage(msg),
-                    credential
-                )
-            }
-        }
-
-    @Test
-    fun testHandlePresentation_whenWrongPresentationSubmission_thenThrowMissingOrNullFieldError() =
-        runTest {
-            val apiMock = mock<Api>()
-            `when`(apiMock.request(any(), any(), any(), any(), any()))
-                .thenReturn(HttpResponse(200, "Ok"))
-
-            val agent = EdgeAgent(
-                apollo = apolloMock,
-                castor = castorMock,
-                pluto = plutoMock,
-                mercury = mercuryMockOld,
-                pollux = polluxMock,
-                connectionManager = connectionManagerMock,
-                seed = seed,
-                api = apiMock,
-                logger = LoggerMock()
-            )
-            val msg = Json.decodeFromString<Message>(
-                "{\"id\":\"00000000-685c-4004-0000-000036ac64ee\",\"piuri\":\"https://didcomm.atalaprism.io/present-proof/3.0/presentation\",\"from\":{\"method\":\"peer\",\"methodId\":\"asdfasdf\"},\"to\":{\"method\":\"peer\",\"methodId\":\"fdsafdsa\"},\"fromPrior\":null,\"body\":\"{}\",\"createdTime\":\"2024-03-08T19:27:38.196506Z\",\"expiresTimePlus\":\"2024-03-09T19:27:38.196559Z\",\"attachments\":[{\"id\":\"00000000-9c2e-4249-0000-0000c1176949\",\"mediaType\":\"application/json\",\"data\":{\"type\":\"org.hyperledger.identus.walletsdk.domain.models.AttachmentBase64\",\"base64\":\"eyJ2ZXJpZmlhYmxlUHJlc2VudGF0aW9uIjpbImV5SmhiR2NpT2lKRlV6STFOa3NpZlEuZXlKcGMzTWlPaUprYVdRNmNISnBjMjA2TWpVM01UbGhPVFppTVRVeE1qQTNNVFk1T0RGaE9EUXpNR0ZrTUdOaU9UWTRaR1ExTXpRd056TTFPVE5qT0dOa00yWXhaREkzWVRZNE1EUmxZelV3WlRwRGNHOURRM0JqUTBWc2IwdENWM1JzWlZNd2VFVkJTa05VZDI5S1l6SldhbU5FU1RGT2JYTjRSV2xCUlc5VFEyNDFkSGxFWVRaWk5uSXRTVzFUY1hCS09Ga3hiV28zU2tNelgyOVZla1V3VG5sNVJXbERRbTluYzJkT1lXVlNaR05EVWtkUWJHVTRNbFoyT1hSS1prNTNiRFp5WnpaV1kyaFNNMDl4YUdsV1lsUmhPRk5YZDI5SFdWaFdNR0ZETUhoRlFWSkRWSGR2U21NeVZtcGpSRWt4VG0xemVFVnBSRTFyUW1RMlJuUnBiMHByTTFoUFJuVXRYMk41TlZodFVpMDBkRlZSTWs1TVIybFhPR0ZKVTI5dGExSnZaelpUWkdVNVVIZHVSekJSTUZOQ1ZHMUdVMVJFWWxOTFFuWkpWalpEVkV4WWNtcEpTblIwWlVkSmJVRlRXRUZ2U0dKWFJucGtSMVo1VFVKQlFsRnJPRXREV0U1c1dUTkJlVTVVV25KTlVrbG5UemN4TUcxME1WZGZhWGhFZVZGTk0zaEpjemRVY0dwTVEwNVBSRkY0WjFab2VEVnphR1pMVGxneGIyRkpTRmRRY25jM1NWVkxiR1pwWWxGMGVEWkthelJVVTJwblkxZE9UMlpqVDNSVk9VUTVVSFZhTjFRNWRDSXNJbk4xWWlJNkltUnBaRHB3Y21semJUcGlaV1ZoTlRJek5HRm1ORFk0TURRM01UUmtPR1ZoT0dWak56ZGlOalpqWXpkbU0yVTRNVFZqTmpoaFltSTBOelZtTWpVMFkyWTVZek13TmpJMk56WXpPa056WTBKRGMxRkNSVzFSUzBReVJqRmtSMmhzWW01U2NGa3lSakJoVnpsMVRVSkJSVkZyT0V0RFdFNXNXVE5CZVU1VVduSk5Va2xuWlZObkxUSlBUekZLWkc1d2VsVlBRbWwwZWtscFkxaGtabnBsUVdOVVpsZEJUaTFaUTJWMVEySjVTV0ZKU2xFMFIxUkpNekIwWVZacGQyTm9WRE5sTUc1TVdFSlRORE5DTkdvNWFteHpiRXR2TWxwc1pGaDZha1ZzZDB0Q01qRm9Zek5TYkdOcVFWRkJWVXBRUTJkc2VscFhUbmROYWxVeVlYcEZVMGxJYTI5UWRHcHFkRk5ZV2paak1VUm5XWEpqZVVsdVJqTllPRE5uU0VVek1XZEVabTFCYm5KbmJUaHBSMmxEVlU5Q2EzbE9PVXhYYkZselNFbFZPVE4wU25reGQxVjFUbmRsU1Y5Wk5XSktVM0ZPYlZwWVZqZzBkeUlzSW01aVppSTZNVFk0TlRZek1UazVOU3dpWlhod0lqb3hOamcxTmpNMU5UazFMQ0oyWXlJNmV5SmpjbVZrWlc1MGFXRnNVM1ZpYW1WamRDSTZleUpoWkdScGRHbHZibUZzVUhKdmNESWlPaUpVWlhOME15SXNJbWxrSWpvaVpHbGtPbkJ5YVhOdE9tSmxaV0UxTWpNMFlXWTBOamd3TkRjeE5HUTRaV0U0WldNM04ySTJObU5qTjJZelpUZ3hOV00yT0dGaVlqUTNOV1l5TlRSalpqbGpNekEyTWpZM05qTTZRM05qUWtOelVVSkZiVkZMUkRKR01XUkhhR3hpYmxKd1dUSkdNR0ZYT1hWTlFrRkZVV3M0UzBOWVRteFpNMEY1VGxSYWNrMVNTV2RsVTJjdE1rOVBNVXBrYm5CNlZVOUNhWFI2U1dsaldHUm1lbVZCWTFSbVYwRk9MVmxEWlhWRFlubEpZVWxLVVRSSFZFa3pNSFJoVm1sM1kyaFVNMlV3Ymt4WVFsTTBNMEkwYWpscWJITnNTMjh5V214a1dIcHFSV3gzUzBJeU1XaGpNMUpzWTJwQlVVRlZTbEJEWjJ4NldsZE9kMDFxVlRKaGVrVlRTVWhyYjFCMGFtcDBVMWhhTm1NeFJHZFpjbU41U1c1R00xZzRNMmRJUlRNeFowUm1iVUZ1Y21kdE9HbEhhVU5WVDBKcmVVNDVURmRzV1hOSVNWVTVNM1JLZVRGM1ZYVk9kMlZKWDFrMVlrcFRjVTV0V2xoV09EUjNJbjBzSW5SNWNHVWlPbHNpVm1WeWFXWnBZV0pzWlVOeVpXUmxiblJwWVd3aVhTd2lRR052Ym5SbGVIUWlPbHNpYUhSMGNITTZYQzljTDNkM2R5NTNNeTV2Y21kY0x6SXdNVGhjTDJOeVpXUmxiblJwWVd4elhDOTJNU0pkZlgwLngwU0YxN1kwVkNEbXQ3SGNlT2RUeGZIbG9mc1ptWTE4Um42VlFiMC1yLWtfQm0zaFRpMS1rMnZrZGpCMjVoZHh5VEN2eGFtLUFrQVAtQWczQWhuNU5nIl19\"},\"format\":\"dif/presentation-exchange/definitions@v1.0\"}],\"thid\":\"00000000-ef9d-4722-0000-00003b1bc908\",\"ack\":[]}"
-            )
-            `when`(plutoMock.getMessageByThidAndPiuri(any(), any()))
-                .thenReturn(flow { emit(null) })
-
-            assertFailsWith(EdgeAgentError.MissingOrNullFieldError::class) {
-                agent.handlePresentation(msg)
-            }
-        }
-
-    @Test
-    fun testHandlePresentationDefinitionRequest_whenJWT_thenSendPresentationSubmissionCorrectly() =
-        runTest {
-            val apiMock = mock<Api>()
-            `when`(apiMock.request(any(), any(), any(), any(), any()))
-                .thenReturn(HttpResponse(200, "Ok"))
-
-            val apolloMock = mock<Apollo>()
-            val castorMock = mock<Castor>()
-            val plutoMock = mock<Pluto>()
-            val mercuryMock = mock<Mercury>()
-            val polluxMock = mock<Pollux>()
-            val connectionManagerMock = mock<ConnectionManager>()
-
-            val privateKey = Secp256k1KeyPair.generateKeyPair(
-                seed = seed,
-                curve = KeyCurve(Curve.SECP256K1)
-            ).privateKey
-            val storablePrivateKeys = listOf(
-                StorablePrivateKey(
-                    id = UUID.randomUUID().toString(),
-                    restorationIdentifier = "secp256k1+priv",
-                    data = privateKey.raw.base64UrlEncoded,
-                    keyPathIndex = 0
-                )
-            )
-            // Mock getDIDPrivateKeysByDID response
-            `when`(plutoMock.getDIDPrivateKeysByDID(any())).thenReturn(flow { emit(storablePrivateKeys) })
-            `when`(
-                apolloMock.restorePrivateKey(
-                    storablePrivateKeys.first().restorationIdentifier,
-                    storablePrivateKeys.first().data
-                )
-            ).thenReturn(privateKey)
-
-            val presentationSubmissionString =
-                "{\"presentation_submission\":{\"id\":\"00000000-c224-45d7-0000-0000732f4932\",\"definition_id\":\"32f54163-7166-48f1-93d8-ff217bdb0653\",\"descriptor_map\":[{\"id\":\"wa_driver_license\",\"format\":\"jwt\",\"path\":\"$.verifiablePresentation[0]\"}]},\"verifiablePresentation\":[\"eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MjU3MTlhOTZiMTUxMjA3MTY5ODFhODQzMGFkMGNiOTY4ZGQ1MzQwNzM1OTNjOGNkM2YxZDI3YTY4MDRlYzUwZTpDcG9DQ3BjQ0Vsb0tCV3RsZVMweEVBSkNUd29KYzJWamNESTFObXN4RWlBRW9TQ241dHlEYTZZNnItSW1TcXBKOFkxbWo3SkMzX29VekUwTnl5RWlDQm9nc2dOYWVSZGNDUkdQbGU4MlZ2OXRKZk53bDZyZzZWY2hSM09xaGlWYlRhOFNXd29HWVhWMGFDMHhFQVJDVHdvSmMyVmpjREkxTm1zeEVpRE1rQmQ2RnRpb0prM1hPRnUtX2N5NVhtUi00dFVRMk5MR2lXOGFJU29ta1JvZzZTZGU5UHduRzBRMFNCVG1GU1REYlNLQnZJVjZDVExYcmpJSnR0ZUdJbUFTWEFvSGJXRnpkR1Z5TUJBQlFrOEtDWE5sWTNBeU5UWnJNUklnTzcxMG10MVdfaXhEeVFNM3hJczdUcGpMQ05PRFF4Z1ZoeDVzaGZLTlgxb2FJSFdQcnc3SVVLbGZpYlF0eDZKazRUU2pnY1dOT2ZjT3RVOUQ5UHVaN1Q5dCIsInN1YiI6ImRpZDpwcmlzbTpiZWVhNTIzNGFmNDY4MDQ3MTRkOGVhOGVjNzdiNjZjYzdmM2U4MTVjNjhhYmI0NzVmMjU0Y2Y5YzMwNjI2NzYzOkNzY0JDc1FCRW1RS0QyRjFkR2hsYm5ScFkyRjBhVzl1TUJBRVFrOEtDWE5sWTNBeU5UWnJNUklnZVNnLTJPTzFKZG5welVPQml0eklpY1hkZnplQWNUZldBTi1ZQ2V1Q2J5SWFJSlE0R1RJMzB0YVZpd2NoVDNlMG5MWEJTNDNCNGo5amxzbEtvMlpsZFh6akVsd0tCMjFoYzNSbGNqQVFBVUpQQ2dselpXTndNalUyYXpFU0lIa29QdGpqdFNYWjZjMURnWXJjeUluRjNYODNnSEUzMWdEZm1BbnJnbThpR2lDVU9Ca3lOOUxXbFlzSElVOTN0Snkxd1V1TndlSV9ZNWJKU3FObVpYVjg0dyIsIm5iZiI6MTY4NTYzMTk5NSwiZXhwIjoxNjg1NjM1NTk1LCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJhZGRpdGlvbmFsUHJvcDIiOiJUZXN0MyIsImlkIjoiZGlkOnByaXNtOmJlZWE1MjM0YWY0NjgwNDcxNGQ4ZWE4ZWM3N2I2NmNjN2YzZTgxNWM2OGFiYjQ3NWYyNTRjZjljMzA2MjY3NjM6Q3NjQkNzUUJFbVFLRDJGMWRHaGxiblJwWTJGMGFXOXVNQkFFUWs4S0NYTmxZM0F5TlRack1SSWdlU2ctMk9PMUpkbnB6VU9CaXR6SWljWGRmemVBY1RmV0FOLVlDZXVDYnlJYUlKUTRHVEkzMHRhVml3Y2hUM2UwbkxYQlM0M0I0ajlqbHNsS28yWmxkWHpqRWx3S0IyMWhjM1JsY2pBUUFVSlBDZ2x6WldOd01qVTJhekVTSUhrb1B0amp0U1haNmMxRGdZcmN5SW5GM1g4M2dIRTMxZ0RmbUFucmdtOGlHaUNVT0JreU45TFdsWXNISVU5M3RKeTF3VXVOd2VJX1k1YkpTcU5tWlhWODR3In0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiXSwiQGNvbnRleHQiOlsiaHR0cHM6XC9cL3d3dy53My5vcmdcLzIwMThcL2NyZWRlbnRpYWxzXC92MSJdfX0.x0SF17Y0VCDmt7HceOdTxfHlofsZmY18Rn6VQb0-r-k_Bm3hTi1-k2vkdjB25hdxyTCvxam-AkAP-Ag3Ahn5Ng\"]}"
-            val presentationSubmission = presentationSubmissionString
-
-            val presentationDefinitionRequest =
-                """{"presentation_definition":{"id":"32f54163-7166-48f1-93d8-ff217bdb0653","input_descriptors":[{"id":"wa_driver_license","name":"Washington State Business License","purpose":"We can only allow licensed Washington State business representatives into the WA Business Conference","constraints":{"fields":[{"path":["${'$'}.credentialSubject.dateOfBirth","${'$'}.credentialSubject.dob","${'$'}.vc.credentialSubject.dateOfBirth","${'$'}.vc.credentialSubject.dob"]}]}}],"format":{"jwt":{"alg":["ES256K"]}}},"options":{"domain":"domain","challenge":"challenge"}}"""
-            val credential = JWTCredential.fromJwtString(
-                "eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MjU3MTlhOTZiMTUxMjA3MTY5ODFhODQzMGFkMGNiOTY4ZGQ1MzQwNzM1OTNjOGNkM2YxZDI3YTY4MDRlYzUwZTpDcG9DQ3BjQ0Vsb0tCV3RsZVMweEVBSkNUd29KYzJWamNESTFObXN4RWlBRW9TQ241dHlEYTZZNnItSW1TcXBKOFkxbWo3SkMzX29VekUwTnl5RWlDQm9nc2dOYWVSZGNDUkdQbGU4MlZ2OXRKZk53bDZyZzZWY2hSM09xaGlWYlRhOFNXd29HWVhWMGFDMHhFQVJDVHdvSmMyVmpjREkxTm1zeEVpRE1rQmQ2RnRpb0prM1hPRnUtX2N5NVhtUi00dFVRMk5MR2lXOGFJU29ta1JvZzZTZGU5UHduRzBRMFNCVG1GU1REYlNLQnZJVjZDVExYcmpJSnR0ZUdJbUFTWEFvSGJXRnpkR1Z5TUJBQlFrOEtDWE5sWTNBeU5UWnJNUklnTzcxMG10MVdfaXhEeVFNM3hJczdUcGpMQ05PRFF4Z1ZoeDVzaGZLTlgxb2FJSFdQcnc3SVVLbGZpYlF0eDZKazRUU2pnY1dOT2ZjT3RVOUQ5UHVaN1Q5dCIsInN1YiI6ImRpZDpwcmlzbTpiZWVhNTIzNGFmNDY4MDQ3MTRkOGVhOGVjNzdiNjZjYzdmM2U4MTVjNjhhYmI0NzVmMjU0Y2Y5YzMwNjI2NzYzOkNzY0JDc1FCRW1RS0QyRjFkR2hsYm5ScFkyRjBhVzl1TUJBRVFrOEtDWE5sWTNBeU5UWnJNUklnZVNnLTJPTzFKZG5welVPQml0eklpY1hkZnplQWNUZldBTi1ZQ2V1Q2J5SWFJSlE0R1RJMzB0YVZpd2NoVDNlMG5MWEJTNDNCNGo5amxzbEtvMlpsZFh6akVsd0tCMjFoYzNSbGNqQVFBVUpQQ2dselpXTndNalUyYXpFU0lIa29QdGpqdFNYWjZjMURnWXJjeUluRjNYODNnSEUzMWdEZm1BbnJnbThpR2lDVU9Ca3lOOUxXbFlzSElVOTN0Snkxd1V1TndlSV9ZNWJKU3FObVpYVjg0dyIsIm5iZiI6MTY4NTYzMTk5NSwiZXhwIjoxNjg1NjM1NTk1LCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJhZGRpdGlvbmFsUHJvcDIiOiJUZXN0MyIsImlkIjoiZGlkOnByaXNtOmJlZWE1MjM0YWY0NjgwNDcxNGQ4ZWE4ZWM3N2I2NmNjN2YzZTgxNWM2OGFiYjQ3NWYyNTRjZjljMzA2MjY3NjM6Q3NjQkNzUUJFbVFLRDJGMWRHaGxiblJwWTJGMGFXOXVNQkFFUWs4S0NYTmxZM0F5TlRack1SSWdlU2ctMk9PMUpkbnB6VU9CaXR6SWljWGRmemVBY1RmV0FOLVlDZXVDYnlJYUlKUTRHVEkzMHRhVml3Y2hUM2UwbkxYQlM0M0I0ajlqbHNsS28yWmxkWHpqRWx3S0IyMWhjM1JsY2pBUUFVSlBDZ2x6WldOd01qVTJhekVTSUhrb1B0amp0U1haNmMxRGdZcmN5SW5GM1g4M2dIRTMxZ0RmbUFucmdtOGlHaUNVT0JreU45TFdsWXNISVU5M3RKeTF3VXVOd2VJX1k1YkpTcU5tWlhWODR3In0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiXSwiQGNvbnRleHQiOlsiaHR0cHM6XC9cL3d3dy53My5vcmdcLzIwMThcL2NyZWRlbnRpYWxzXC92MSJdfX0.x0SF17Y0VCDmt7HceOdTxfHlofsZmY18Rn6VQb0-r-k_Bm3hTi1-k2vkdjB25hdxyTCvxam-AkAP-Ag3Ahn5Ng"
-            )
-            // Mock createPresentationSubmission response
-            `when`(polluxMock.createJWTPresentationSubmission(any(), any(), any())).thenReturn(
-//            `when`(polluxMock.createJWTPresentationSubmission(presentationDefinitionRequest, credential, privateKeys.first())).thenReturn(
-                presentationSubmission
-            )
-
-            val agent = EdgeAgent(
-                apollo = apolloMock,
-                castor = castorMock,
-                pluto = plutoMock,
-                mercury = mercuryMock,
-                pollux = polluxMock,
-                connectionManager = connectionManagerMock,
-                seed = seed,
-                api = apiMock,
-                logger = LoggerMock()
-            )
-            val msg = Json.decodeFromString<Message>(
-                """{"id":"00000000-685c-4004-0000-000036ac64ee","piuri":"https://didcomm.atalaprism.io/present-proof/3.0/request-presentation","from":{"method":"peer","methodId":"asdfasdf"},"to":{"method":"peer","methodId":"fdsafdsa"},"fromPrior":null,"body":"{}","createdTime":"2024-03-08T19:27:38.196506Z","expiresTimePlus":"2024-03-09T19:27:38.196559Z","attachments":[{"id":"00000000-9c2e-4249-0000-0000c1176949","mediaType":"application/json","data":{"type":"org.hyperledger.identus.walletsdk.domain.models.AttachmentBase64","base64":"eyJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjMyZjU0MTYzLTcxNjYtNDhmMS05M2Q4LWZmMjE3YmRiMDY1MyIsImlucHV0X2Rlc2NyaXB0b3JzIjpbeyJpZCI6IndhX2RyaXZlcl9saWNlbnNlIiwibmFtZSI6Ildhc2hpbmd0b24gU3RhdGUgQnVzaW5lc3MgTGljZW5zZSIsInB1cnBvc2UiOiJXZSBjYW4gb25seSBhbGxvdyBsaWNlbnNlZCBXYXNoaW5ndG9uIFN0YXRlIGJ1c2luZXNzIHJlcHJlc2VudGF0aXZlcyBpbnRvIHRoZSBXQSBCdXNpbmVzcyBDb25mZXJlbmNlIiwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiIsIiQudmMuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLnZjLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiJdfV19fV0sImZvcm1hdCI6eyJqd3QiOnsiYWxnIjpbIkVTMjU2SyJdfX19LCAib3B0aW9ucyI6IHsiZG9tYWluIjogImRvbWFpbiIsICJjaGFsbGVuZ2UiOiAiY2hhbGxlbmdlIn19"},"format":"dif/presentation-exchange/definitions@v1.0"}],"thid":"00000000-ef9d-4722-0000-00003b1bc908","ack":[]}"""
-            )
-            val presentation = agent.preparePresentationForRequestProof(
+        val agent = EdgeAgent(
+            apollo = apolloMock,
+            castor = castorMock,
+            pluto = plutoMock,
+            mercury = mercuryMock,
+            pollux = polluxMock,
+            connectionManager = connectionManagerMock,
+            seed = seed,
+            api = apiMock,
+            logger = LoggerMock()
+        )
+        val msg = Json.decodeFromString<Message>(
+            "{\"id\":\"00000000-685c-4004-0000-000036ac64ee\",\"piuri\":\"https://didcomm.atalaprism.io/present-proof/3.0/request-presentation\",\"from\":{\"method\":\"peer\",\"methodId\":\"asdfasdf\"},\"to\":{\"method\":\"peer\",\"methodId\":\"fdsafdsa\"},\"fromPrior\":null,\"body\":\"{}\",\"createdTime\":\"2024-03-08T19:27:38.196506Z\",\"expiresTimePlus\":\"2024-03-09T19:27:38.196559Z\",\"attachments\":[{\"id\":\"00000000-9c2e-4249-0000-0000c1176949\",\"mediaType\":\"application/json\",\"data\":{\"type\":\"org.hyperledger.identus.walletsdk.domain.models.AttachmentBase64\",\"base64\":\"eyJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjMyZjU0MTYzLTcxNjYtNDhmMS05M2Q4LWZmMjE3YmRiMDY1MyIsImlucHV0X2Rlc2NyaXB0b3JzIjpbeyJpZCI6IndhX2RyaXZlcl9saWNlbnNlIiwibmFtZSI6Ildhc2hpbmd0b24gU3RhdGUgQnVzaW5lc3MgTGljZW5zZSIsInB1cnBvc2UiOiJXZSBjYW4gb25seSBhbGxvdyBsaWNlbnNlZCBXYXNoaW5ndG9uIFN0YXRlIGJ1c2luZXNzIHJlcHJlc2VudGF0aXZlcyBpbnRvIHRoZSBXQSBCdXNpbmVzcyBDb25mZXJlbmNlIiwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiIsIiQudmMuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLnZjLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiJdfV19fV0sImZvcm1hdCI6eyJqd3QiOnsiYWxnIjpbIkVTMjU2SyJdfX19LCAib3B0aW9ucyI6IHsiZG9tYWluIjogImRvbWFpbiIsICJjaGFsbGVuZ2UiOiAiY2hhbGxlbmdlIn19\"},\"format\":\"dif/presentation-exchange/fail_test@v1.0\"}],\"thid\":\"00000000-ef9d-4722-0000-00003b1bc908\",\"ack\":[]}"
+        )
+        val credential = AnonCredential(
+            schemaID = "",
+            credentialDefinitionID = "",
+            values = mapOf(),
+            signatureJson = "",
+            signatureCorrectnessProofJson = "",
+            revocationRegistryId = null,
+            revocationRegistryJson = null,
+            witnessJson = "",
+            json = ""
+        )
+        assertFailsWith(EdgeAgentError.InvalidCredentialError::class) {
+            agent.preparePresentationForRequestProof(
                 RequestPresentation.fromMessage(msg),
                 credential
             )
-
-            assertEquals("00000000-ef9d-4722-0000-00003b1bc908", presentation.thid)
-            assertEquals("did:peer:fdsafdsa", presentation.from.toString())
-            assertEquals("did:peer:asdfasdf", presentation.to.toString())
-            assertEquals(1, presentation.attachments.size)
-            val attachmentDescriptor = presentation.attachments.first()
-            val attachmentData = attachmentDescriptor.data
-            assertTrue(attachmentData is AttachmentBase64)
-            val expectedPresentationSubmission =
-                Json.decodeFromString<PresentationSubmission>(presentationSubmissionString)
-            val attachmentDataString = attachmentData.getDataAsJsonString()
-            val actualPresentationSubmission = Json.decodeFromString<PresentationSubmission>(attachmentDataString)
-
-            assertEquals(
-                expectedPresentationSubmission,
-                actualPresentationSubmission
-            )
         }
+    }
 
     @Test
-    fun testPreparePresentationForRequestProof_whenJWTProof_thenSendPresentationCorrectly() =
-        runTest {
-            val apiMock = mock<Api>()
-            `when`(apiMock.request(any(), any(), any(), any(), any()))
-                .thenReturn(HttpResponse(200, "Ok"))
+    fun testHandlePresentation_whenWrongPresentationSubmission_thenThrowMissingOrNullFieldError() = runTest {
+        val apiMock = mock<Api>()
+        `when`(apiMock.request(any(), any(), any(), any(), any()))
+            .thenReturn(HttpResponse(200, "Ok"))
 
-            val provableCredentialMock = mock<ProvableCredential>()
-            val connectionManagerMock = mock<ConnectionManager>()
+        val agent = EdgeAgent(
+            apollo = apolloMock,
+            castor = castorMock,
+            pluto = plutoMock,
+            mercury = mercuryMockOld,
+            pollux = polluxMock,
+            connectionManager = connectionManagerMock,
+            seed = seed,
+            api = apiMock,
+            logger = LoggerMock()
+        )
+        val msg = Json.decodeFromString<Message>(
+            "{\"id\":\"00000000-685c-4004-0000-000036ac64ee\",\"piuri\":\"https://didcomm.atalaprism.io/present-proof/3.0/presentation\",\"from\":{\"method\":\"peer\",\"methodId\":\"asdfasdf\"},\"to\":{\"method\":\"peer\",\"methodId\":\"fdsafdsa\"},\"fromPrior\":null,\"body\":\"{}\",\"createdTime\":\"2024-03-08T19:27:38.196506Z\",\"expiresTimePlus\":\"2024-03-09T19:27:38.196559Z\",\"attachments\":[{\"id\":\"00000000-9c2e-4249-0000-0000c1176949\",\"mediaType\":\"application/json\",\"data\":{\"type\":\"org.hyperledger.identus.walletsdk.domain.models.AttachmentBase64\",\"base64\":\"eyJ2ZXJpZmlhYmxlUHJlc2VudGF0aW9uIjpbImV5SmhiR2NpT2lKRlV6STFOa3NpZlEuZXlKcGMzTWlPaUprYVdRNmNISnBjMjA2TWpVM01UbGhPVFppTVRVeE1qQTNNVFk1T0RGaE9EUXpNR0ZrTUdOaU9UWTRaR1ExTXpRd056TTFPVE5qT0dOa00yWXhaREkzWVRZNE1EUmxZelV3WlRwRGNHOURRM0JqUTBWc2IwdENWM1JzWlZNd2VFVkJTa05VZDI5S1l6SldhbU5FU1RGT2JYTjRSV2xCUlc5VFEyNDFkSGxFWVRaWk5uSXRTVzFUY1hCS09Ga3hiV28zU2tNelgyOVZla1V3VG5sNVJXbERRbTluYzJkT1lXVlNaR05EVWtkUWJHVTRNbFoyT1hSS1prNTNiRFp5WnpaV1kyaFNNMDl4YUdsV1lsUmhPRk5YZDI5SFdWaFdNR0ZETUhoRlFWSkRWSGR2U21NeVZtcGpSRWt4VG0xemVFVnBSRTFyUW1RMlJuUnBiMHByTTFoUFJuVXRYMk41TlZodFVpMDBkRlZSTWs1TVIybFhPR0ZKVTI5dGExSnZaelpUWkdVNVVIZHVSekJSTUZOQ1ZHMUdVMVJFWWxOTFFuWkpWalpEVkV4WWNtcEpTblIwWlVkSmJVRlRXRUZ2U0dKWFJucGtSMVo1VFVKQlFsRnJPRXREV0U1c1dUTkJlVTVVV25KTlVrbG5UemN4TUcxME1WZGZhWGhFZVZGTk0zaEpjemRVY0dwTVEwNVBSRkY0WjFab2VEVnphR1pMVGxneGIyRkpTRmRRY25jM1NWVkxiR1pwWWxGMGVEWkthelJVVTJwblkxZE9UMlpqVDNSVk9VUTVVSFZhTjFRNWRDSXNJbk4xWWlJNkltUnBaRHB3Y21semJUcGlaV1ZoTlRJek5HRm1ORFk0TURRM01UUmtPR1ZoT0dWak56ZGlOalpqWXpkbU0yVTRNVFZqTmpoaFltSTBOelZtTWpVMFkyWTVZek13TmpJMk56WXpPa056WTBKRGMxRkNSVzFSUzBReVJqRmtSMmhzWW01U2NGa3lSakJoVnpsMVRVSkJSVkZyT0V0RFdFNXNXVE5CZVU1VVduSk5Va2xuWlZObkxUSlBUekZLWkc1d2VsVlBRbWwwZWtscFkxaGtabnBsUVdOVVpsZEJUaTFaUTJWMVEySjVTV0ZKU2xFMFIxUkpNekIwWVZacGQyTm9WRE5sTUc1TVdFSlRORE5DTkdvNWFteHpiRXR2TWxwc1pGaDZha1ZzZDB0Q01qRm9Zek5TYkdOcVFWRkJWVXBRUTJkc2VscFhUbmROYWxVeVlYcEZVMGxJYTI5UWRHcHFkRk5ZV2paak1VUm5XWEpqZVVsdVJqTllPRE5uU0VVek1XZEVabTFCYm5KbmJUaHBSMmxEVlU5Q2EzbE9PVXhYYkZselNFbFZPVE4wU25reGQxVjFUbmRsU1Y5Wk5XSktVM0ZPYlZwWVZqZzBkeUlzSW01aVppSTZNVFk0TlRZek1UazVOU3dpWlhod0lqb3hOamcxTmpNMU5UazFMQ0oyWXlJNmV5SmpjbVZrWlc1MGFXRnNVM1ZpYW1WamRDSTZleUpoWkdScGRHbHZibUZzVUhKdmNESWlPaUpVWlhOME15SXNJbWxrSWpvaVpHbGtPbkJ5YVhOdE9tSmxaV0UxTWpNMFlXWTBOamd3TkRjeE5HUTRaV0U0WldNM04ySTJObU5qTjJZelpUZ3hOV00yT0dGaVlqUTNOV1l5TlRSalpqbGpNekEyTWpZM05qTTZRM05qUWtOelVVSkZiVkZMUkRKR01XUkhhR3hpYmxKd1dUSkdNR0ZYT1hWTlFrRkZVV3M0UzBOWVRteFpNMEY1VGxSYWNrMVNTV2RsVTJjdE1rOVBNVXBrYm5CNlZVOUNhWFI2U1dsaldHUm1lbVZCWTFSbVYwRk9MVmxEWlhWRFlubEpZVWxLVVRSSFZFa3pNSFJoVm1sM1kyaFVNMlV3Ymt4WVFsTTBNMEkwYWpscWJITnNTMjh5V214a1dIcHFSV3gzUzBJeU1XaGpNMUpzWTJwQlVVRlZTbEJEWjJ4NldsZE9kMDFxVlRKaGVrVlRTVWhyYjFCMGFtcDBVMWhhTm1NeFJHZFpjbU41U1c1R00xZzRNMmRJUlRNeFowUm1iVUZ1Y21kdE9HbEhhVU5WVDBKcmVVNDVURmRzV1hOSVNWVTVNM1JLZVRGM1ZYVk9kMlZKWDFrMVlrcFRjVTV0V2xoV09EUjNJbjBzSW5SNWNHVWlPbHNpVm1WeWFXWnBZV0pzWlVOeVpXUmxiblJwWVd3aVhTd2lRR052Ym5SbGVIUWlPbHNpYUhSMGNITTZYQzljTDNkM2R5NTNNeTV2Y21kY0x6SXdNVGhjTDJOeVpXUmxiblJwWVd4elhDOTJNU0pkZlgwLngwU0YxN1kwVkNEbXQ3SGNlT2RUeGZIbG9mc1ptWTE4Um42VlFiMC1yLWtfQm0zaFRpMS1rMnZrZGpCMjVoZHh5VEN2eGFtLUFrQVAtQWczQWhuNU5nIl19\"},\"format\":\"dif/presentation-exchange/definitions@v1.0\"}],\"thid\":\"00000000-ef9d-4722-0000-00003b1bc908\",\"ack\":[]}"
+        )
+        `when`(plutoMock.getMessageByThidAndPiuri(any(), any()))
+            .thenReturn(flow { emit(null) })
 
-            val json = Json {
-                ignoreUnknownKeys = true
-            }
-            val requestPresentationJson =
-                """{"id":"581f9d51-bb0c-4bcd-a851-487a14d30cc6","piuri":"https://didcomm.atalaprism.io/present-proof/3.0/request-presentation","from":{"method":"peer","methodId":"2.Ez6LScuoWiuQHfk4Js2aMC4Qs8rD5zNUfmiNfWMCb2pWR3FAc.Vz6MkvKtf2JqqcxhC1MPmWbWPrxqt8A4v44zri36XHgNmsmgV.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly8xOTIuMTY4LjY4LjExMzo4MDAwL2RpZGNvbW0iLCJyIjpbXSwiYSI6WyJkaWRjb21tL3YyIl19fQ"},"to":{"method":"peer","methodId":"2.Ez6LSmuL2dNc6wg5HpqDcDBXnNDG6TawcrBuxZbFkW9Hberjq.Vz6MkvcyMv5VAbTTttvNpo3YYku9Y8VMR9kRw8SFjAX8ic7JU.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6ImRpZDpwZWVyOjIuRXo2TFNnaHdTRTQzN3duREUxcHQzWDZoVkRVUXpTanNIemlucFgzWEZ2TWpSQW03eS5WejZNa2hoMWU1Q0VZWXE2SkJVY1RaNkNwMnJhbkNXUnJ2N1lheDNMZTRONTlSNmRkLlNleUowSWpvaVpHMGlMQ0p6SWpwN0luVnlhU0k2SW1oMGRIQnpPaTh2YzJsMExYQnlhWE50TFcxbFpHbGhkRzl5TG1GMFlXeGhjSEpwYzIwdWFXOGlMQ0poSWpwYkltUnBaR052YlcwdmRqSWlYWDE5LlNleUowSWpvaVpHMGlMQ0p6SWpwN0luVnlhU0k2SW5kemN6b3ZMM05wZEMxd2NtbHpiUzF0WldScFlYUnZjaTVoZEdGc1lYQnlhWE50TG1sdkwzZHpJaXdpWVNJNld5SmthV1JqYjIxdEwzWXlJbDE5ZlEiLCJyIjpbXSwiYSI6W119fQ"},"fromPrior":"null","body":{"goal_code":"Request Proof Presentation","comment":null,"proof_types":[],"will_confirm":false},"createdTime":"1718228880","expiresTimePlus":"2024-06-13T21:48:02.636794Z","attachments":[{"id":"e784ac49-bb2d-4445-9cac-edd365664c73","data":{"type":"org.hyperledger.identus.walletsdk.domain.models.AttachmentJsonData","data":"{\"options\":{\"domain\":\"https:\\/\\/prism-verifier.com\",\"challenge\":\"11c91493-01b3-4c4d-ac36-b336bab5bddf\"},\"presentation_definition\":{\"purpose\":null,\"format\":null,\"name\":null,\"input_descriptors\":[],\"id\":\"56108c4a-ca57-40b6-89f0-1e1a2fa186fd\"}}"},"format":"prism/jwt"}],"thid":"c7cdff93-2706-4023-8d3c-3ce850ab0b2d","ack":[]}"""
-            val requestPresentation = json.decodeFromString<RequestPresentation>(requestPresentationJson)
-
-            val agent = EdgeAgent(
-                apollo = apolloMock,
-                castor = castorMock,
-                pluto = plutoMock,
-                mercury = mercuryMockOld,
-                pollux = polluxMock,
-                connectionManager = connectionManagerMock,
-                seed = seed,
-                api = apiMock,
-                logger = LoggerMock()
-            )
-
-            val credential = JWTCredential.fromJwtString(
-                "eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MzM3ZThmZTE0NGFhY2VkM2NhM2RkNTk0NjI0MDRmNDU5OTZlM2IyMjFhYmM0MTBhNzI1ZWE2NjUzNDg5NzJiYjpDcmtCQ3JZQkVqb0tCbUYxZEdndE1SQUVTaTRLQ1hObFkzQXlOVFpyTVJJaEF2eWcxYTN1cHVmbFBLczhKR1hKU3NxV1pjVG9GQXk3RjNSTFBjQlk0V25zRWpzS0IybHpjM1ZsTFRFUUFrb3VDZ2x6WldOd01qVTJhekVTSVFPYVBUbzM5Tnh2UmhXUW5iVWhoTXM5bTFIeEJtcV9hZWNHM0tTTGZiNWgzUkk3Q2dkdFlYTjBaWEl3RUFGS0xnb0pjMlZqY0RJMU5tc3hFaUVEZ3poOElDY1ZhNVlNZjYzRFFaM191dTNOMzNsSXVGSGJoX09KUlVIbWd2YyIsInN1YiI6ImRpZDpwcmlzbTpiZDgxZmY1NDQzNDJjMTAwNDZkZmE0YmEyOTVkNWIzNmU0Y2ZlNWE3ZWIxMjBlMTBlZTVjMjQ4NzAwNjUxMDA5OkNvVUJDb0lCRWpzS0IyMWhjM1JsY2pBUUFVb3VDZ2x6WldOd01qVTJhekVTSVFQdjVQNXl5Z3Jad2FKbFl6bDU5bTJIQURLVFhVTFBzUmUwa2dlRUh2dExnQkpEQ2c5aGRYUm9aVzUwYVdOaGRHbHZiakFRQkVvdUNnbHpaV053TWpVMmF6RVNJUVB2NVA1eXlnclp3YUpsWXpsNTltMkhBREtUWFVMUHNSZTBrZ2VFSHZ0TGdBIiwibmJmIjoxNzE4MjI1MDUyLCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJlbWFpbEFkZHJlc3MiOiJkZW1vQGVtYWlsLmNvbSIsImRyaXZpbmdDbGFzcyI6IjEiLCJmYW1pbHlOYW1lIjoiZGVtbyIsImRyaXZpbmdMaWNlbnNlSUQiOiJBMTIyMTMzMiIsImlkIjoiZGlkOnByaXNtOmJkODFmZjU0NDM0MmMxMDA0NmRmYTRiYTI5NWQ1YjM2ZTRjZmU1YTdlYjEyMGUxMGVlNWMyNDg3MDA2NTEwMDk6Q29VQkNvSUJFanNLQjIxaGMzUmxjakFRQVVvdUNnbHpaV053TWpVMmF6RVNJUVB2NVA1eXlnclp3YUpsWXpsNTltMkhBREtUWFVMUHNSZTBrZ2VFSHZ0TGdCSkRDZzloZFhSb1pXNTBhV05oZEdsdmJqQVFCRW91Q2dselpXTndNalUyYXpFU0lRUHY1UDV5eWdyWndhSmxZemw1OW0ySEFES1RYVUxQc1JlMGtnZUVIdnRMZ0EiLCJkYXRlT2ZJc3N1YW5jZSI6IjAxXC8wMVwvMjAyNCJ9LCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIl0sIkBjb250ZXh0IjpbImh0dHBzOlwvXC93d3cudzMub3JnXC8yMDE4XC9jcmVkZW50aWFsc1wvdjEiXSwiY3JlZGVudGlhbFN0YXR1cyI6eyJzdGF0dXNQdXJwb3NlIjoiUmV2b2NhdGlvbiIsInN0YXR1c0xpc3RJbmRleCI6NCwiaWQiOiJodHRwOlwvXC8xOTIuMTY4LjY4LjExMzo4MDAwXC9wcmlzbS1hZ2VudFwvY3JlZGVudGlhbC1zdGF0dXNcLzM5YjBiNzI2LTBmNmUtNDlmNy05YzUyLTYyYTc4MTcxNzVlOCM0IiwidHlwZSI6IlN0YXR1c0xpc3QyMDIxRW50cnkiLCJzdGF0dXNMaXN0Q3JlZGVudGlhbCI6Imh0dHA6XC9cLzE5Mi4xNjguNjguMTEzOjgwMDBcL3ByaXNtLWFnZW50XC9jcmVkZW50aWFsLXN0YXR1c1wvMzliMGI3MjYtMGY2ZS00OWY3LTljNTItNjJhNzgxNzE3NWU4In19fQ.XuMkGkJQCM5214ZjxwdHf81Jox_qyGsh011OmRtda8lTsh6TFPy9jDNey0DVijCg12qDTj-cYcFUAXe6pfvoPQ"
-            )
-
-            val pathIndexFlow = flow { emit(1) }
-            `when`(plutoMock.getPrismDIDKeyPathIndex(DID(credential.subject!!))).thenReturn(pathIndexFlow)
-
-            val testVerifiablePresentationJWTPayload = "testPayload"
-            `when`(polluxMock.createJWTPresentationSubmission(any(), any(), any())).thenReturn(
-                testVerifiablePresentationJWTPayload
-            )
-
-            val presentation = agent.preparePresentationForRequestProof(
-                requestPresentation,
-                credential
-            )
-            assertEquals(requestPresentation.thid, presentation.thid)
-            assertEquals(requestPresentation.to.toString(), presentation.from.toString())
-            assertEquals(requestPresentation.from.toString(), presentation.to.toString())
-            assertEquals(1, presentation.attachments.size)
-            val attachmentDescriptor = presentation.attachments.first()
-            assertEquals(CredentialType.JWT.type, attachmentDescriptor.mediaType)
-            val attachmentData = attachmentDescriptor.data
-            assertTrue(attachmentData is AttachmentBase64)
-            assertEquals(
-                3,
-                attachmentData.getDataAsJsonString().split(".").count()
-            )
+        assertFailsWith(EdgeAgentError.MissingOrNullFieldError::class) {
+            agent.handlePresentation(msg)
         }
+    }
 
     @Test
-    fun testHandlePresentationSubmission_whenAttachmentNotSupported_thenThrowsAttachmentTypeNotSupported() =
-        runTest {
-            val apiMock = mock<Api>()
-            `when`(apiMock.request(any(), any(), any(), any(), any()))
-                .thenReturn(HttpResponse(200, "Ok"))
+    fun testHandlePresentationDefinitionRequest_whenJWT_thenSendPresentationSubmissionCorrectly() = runTest {
+        val apiMock = mock<Api>()
+        `when`(apiMock.request(any(), any(), any(), any(), any()))
+            .thenReturn(HttpResponse(200, "Ok"))
 
-            val apolloMock = mock<Apollo>()
-            val castorMock = mock<Castor>()
-            val plutoMock = mock<Pluto>()
-            val mercuryMock = mock<Mercury>()
-            val polluxMock = mock<Pollux>()
-            val connectionManagerMock = mock<ConnectionManager>()
-            val seed = Seed(MnemonicHelper.createRandomSeed())
+        val apolloMock = mock<Apollo>()
+        val castorMock = mock<Castor>()
+        val plutoMock = mock<Pluto>()
+        val mercuryMock = mock<Mercury>()
+        val polluxMock = mock<Pollux>()
+        val connectionManagerMock = mock<ConnectionManager>()
 
-            val privateKeys = listOf(
-                Secp256k1KeyPair.generateKeyPair(
-                    seed = Seed(MnemonicHelper.createRandomSeed()),
-                    curve = KeyCurve(Curve.SECP256K1)
-                ).privateKey
+        val privateKey = Secp256k1KeyPair.generateKeyPair(
+            seed = seed,
+            curve = KeyCurve(Curve.SECP256K1)
+        ).privateKey
+        val storablePrivateKeys = listOf(
+            StorablePrivateKey(
+                id = UUID.randomUUID().toString(),
+                restorationIdentifier = "secp256k1+priv",
+                data = privateKey.raw.base64UrlEncoded,
+                keyPathIndex = 0
             )
-            val storablePrivateKeys = listOf(
-                StorablePrivateKey(
-                    id = UUID.randomUUID().toString(),
-                    restorationIdentifier = "secp256k1+priv",
-                    data = privateKeys.first().raw.base64UrlEncoded,
-                    keyPathIndex = 0
-                )
+        )
+        // Mock getDIDPrivateKeysByDID response
+        `when`(plutoMock.getDIDPrivateKeysByDID(any())).thenReturn(flow { emit(storablePrivateKeys) })
+        `when`(
+            apolloMock.restorePrivateKey(
+                storablePrivateKeys.first().restorationIdentifier,
+                storablePrivateKeys.first().data
             )
-            // Mock getDIDPrivateKeysByDID response
-            `when`(plutoMock.getDIDPrivateKeysByDID(any())).thenReturn(flow { emit(storablePrivateKeys) })
+        ).thenReturn(privateKey)
 
-            val presentationSubmission =
-                """{"presentation_submission":{"id":"00000000-c224-45d7-0000-0000732f4932","definition_id":"32f54163-7166-48f1-93d8-ff217bdb0653","descriptor_map":[{"id":"wa_driver_license","format":"jwt","path":"${'$'}.verifiablePresentation[0]"}]},"verifiablePresentation":["eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MjU3MTlhOTZiMTUxMjA3MTY5ODFhODQzMGFkMGNiOTY4ZGQ1MzQwNzM1OTNjOGNkM2YxZDI3YTY4MDRlYzUwZTpDcG9DQ3BjQ0Vsb0tCV3RsZVMweEVBSkNUd29KYzJWamNESTFObXN4RWlBRW9TQ241dHlEYTZZNnItSW1TcXBKOFkxbWo3SkMzX29VekUwTnl5RWlDQm9nc2dOYWVSZGNDUkdQbGU4MlZ2OXRKZk53bDZyZzZWY2hSM09xaGlWYlRhOFNXd29HWVhWMGFDMHhFQVJDVHdvSmMyVmpjREkxTm1zeEVpRE1rQmQ2RnRpb0prM1hPRnUtX2N5NVhtUi00dFVRMk5MR2lXOGFJU29ta1JvZzZTZGU5UHduRzBRMFNCVG1GU1REYlNLQnZJVjZDVExYcmpJSnR0ZUdJbUFTWEFvSGJXRnpkR1Z5TUJBQlFrOEtDWE5sWTNBeU5UWnJNUklnTzcxMG10MVdfaXhEeVFNM3hJczdUcGpMQ05PRFF4Z1ZoeDVzaGZLTlgxb2FJSFdQcnc3SVVLbGZpYlF0eDZKazRUU2pnY1dOT2ZjT3RVOUQ5UHVaN1Q5dCIsInN1YiI6ImRpZDpwcmlzbTpiZWVhNTIzNGFmNDY4MDQ3MTRkOGVhOGVjNzdiNjZjYzdmM2U4MTVjNjhhYmI0NzVmMjU0Y2Y5YzMwNjI2NzYzOkNzY0JDc1FCRW1RS0QyRjFkR2hsYm5ScFkyRjBhVzl1TUJBRVFrOEtDWE5sWTNBeU5UWnJNUklnZVNnLTJPTzFKZG5welVPQml0eklpY1hkZnplQWNUZldBTi1ZQ2V1Q2J5SWFJSlE0R1RJMzB0YVZpd2NoVDNlMG5MWEJTNDNCNGo5amxzbEtvMlpsZFh6akVsd0tCMjFoYzNSbGNqQVFBVUpQQ2dselpXTndNalUyYXpFU0lIa29QdGpqdFNYWjZjMURnWXJjeUluRjNYODNnSEUzMWdEZm1BbnJnbThpR2lDVU9Ca3lOOUxXbFlzSElVOTN0Snkxd1V1TndlSV9ZNWJKU3FObVpYVjg0dyIsIm5iZiI6MTY4NTYzMTk5NSwiZXhwIjoxNjg1NjM1NTk1LCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJhZGRpdGlvbmFsUHJvcDIiOiJUZXN0MyIsImlkIjoiZGlkOnByaXNtOmJlZWE1MjM0YWY0NjgwNDcxNGQ4ZWE4ZWM3N2I2NmNjN2YzZTgxNWM2OGFiYjQ3NWYyNTRjZjljMzA2MjY3NjM6Q3NjQkNzUUJFbVFLRDJGMWRHaGxiblJwWTJGMGFXOXVNQkFFUWs4S0NYTmxZM0F5TlRack1SSWdlU2ctMk9PMUpkbnB6VU9CaXR6SWljWGRmemVBY1RmV0FOLVlDZXVDYnlJYUlKUTRHVEkzMHRhVml3Y2hUM2UwbkxYQlM0M0I0ajlqbHNsS28yWmxkWHpqRWx3S0IyMWhjM1JsY2pBUUFVSlBDZ2x6WldOd01qVTJhekVTSUhrb1B0amp0U1haNmMxRGdZcmN5SW5GM1g4M2dIRTMxZ0RmbUFucmdtOGlHaUNVT0JreU45TFdsWXNISVU5M3RKeTF3VXVOd2VJX1k1YkpTcU5tWlhWODR3In0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiXSwiQGNvbnRleHQiOlsiaHR0cHM6XC9cL3d3dy53My5vcmdcLzIwMThcL2NyZWRlbnRpYWxzXC92MSJdfX0.x0SF17Y0VCDmt7HceOdTxfHlofsZmY18Rn6VQb0-r-k_Bm3hTi1-k2vkdjB25hdxyTCvxam-AkAP-Ag3Ahn5Ng"]}"""
-            // Mock createPresentationSubmission response
-            `when`(polluxMock.createJWTPresentationSubmission(any(), any(), any())).thenReturn(
-                presentationSubmission
-            )
+        val presentationSubmissionString =
+            "{\"presentation_submission\":{\"id\":\"00000000-c224-45d7-0000-0000732f4932\",\"definition_id\":\"32f54163-7166-48f1-93d8-ff217bdb0653\",\"descriptor_map\":[{\"id\":\"wa_driver_license\",\"format\":\"jwt\",\"path\":\"$.verifiablePresentation[0]\"}]},\"verifiablePresentation\":[\"eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MjU3MTlhOTZiMTUxMjA3MTY5ODFhODQzMGFkMGNiOTY4ZGQ1MzQwNzM1OTNjOGNkM2YxZDI3YTY4MDRlYzUwZTpDcG9DQ3BjQ0Vsb0tCV3RsZVMweEVBSkNUd29KYzJWamNESTFObXN4RWlBRW9TQ241dHlEYTZZNnItSW1TcXBKOFkxbWo3SkMzX29VekUwTnl5RWlDQm9nc2dOYWVSZGNDUkdQbGU4MlZ2OXRKZk53bDZyZzZWY2hSM09xaGlWYlRhOFNXd29HWVhWMGFDMHhFQVJDVHdvSmMyVmpjREkxTm1zeEVpRE1rQmQ2RnRpb0prM1hPRnUtX2N5NVhtUi00dFVRMk5MR2lXOGFJU29ta1JvZzZTZGU5UHduRzBRMFNCVG1GU1REYlNLQnZJVjZDVExYcmpJSnR0ZUdJbUFTWEFvSGJXRnpkR1Z5TUJBQlFrOEtDWE5sWTNBeU5UWnJNUklnTzcxMG10MVdfaXhEeVFNM3hJczdUcGpMQ05PRFF4Z1ZoeDVzaGZLTlgxb2FJSFdQcnc3SVVLbGZpYlF0eDZKazRUU2pnY1dOT2ZjT3RVOUQ5UHVaN1Q5dCIsInN1YiI6ImRpZDpwcmlzbTpiZWVhNTIzNGFmNDY4MDQ3MTRkOGVhOGVjNzdiNjZjYzdmM2U4MTVjNjhhYmI0NzVmMjU0Y2Y5YzMwNjI2NzYzOkNzY0JDc1FCRW1RS0QyRjFkR2hsYm5ScFkyRjBhVzl1TUJBRVFrOEtDWE5sWTNBeU5UWnJNUklnZVNnLTJPTzFKZG5welVPQml0eklpY1hkZnplQWNUZldBTi1ZQ2V1Q2J5SWFJSlE0R1RJMzB0YVZpd2NoVDNlMG5MWEJTNDNCNGo5amxzbEtvMlpsZFh6akVsd0tCMjFoYzNSbGNqQVFBVUpQQ2dselpXTndNalUyYXpFU0lIa29QdGpqdFNYWjZjMURnWXJjeUluRjNYODNnSEUzMWdEZm1BbnJnbThpR2lDVU9Ca3lOOUxXbFlzSElVOTN0Snkxd1V1TndlSV9ZNWJKU3FObVpYVjg0dyIsIm5iZiI6MTY4NTYzMTk5NSwiZXhwIjoxNjg1NjM1NTk1LCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJhZGRpdGlvbmFsUHJvcDIiOiJUZXN0MyIsImlkIjoiZGlkOnByaXNtOmJlZWE1MjM0YWY0NjgwNDcxNGQ4ZWE4ZWM3N2I2NmNjN2YzZTgxNWM2OGFiYjQ3NWYyNTRjZjljMzA2MjY3NjM6Q3NjQkNzUUJFbVFLRDJGMWRHaGxiblJwWTJGMGFXOXVNQkFFUWs4S0NYTmxZM0F5TlRack1SSWdlU2ctMk9PMUpkbnB6VU9CaXR6SWljWGRmemVBY1RmV0FOLVlDZXVDYnlJYUlKUTRHVEkzMHRhVml3Y2hUM2UwbkxYQlM0M0I0ajlqbHNsS28yWmxkWHpqRWx3S0IyMWhjM1JsY2pBUUFVSlBDZ2x6WldOd01qVTJhekVTSUhrb1B0amp0U1haNmMxRGdZcmN5SW5GM1g4M2dIRTMxZ0RmbUFucmdtOGlHaUNVT0JreU45TFdsWXNISVU5M3RKeTF3VXVOd2VJX1k1YkpTcU5tWlhWODR3In0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiXSwiQGNvbnRleHQiOlsiaHR0cHM6XC9cL3d3dy53My5vcmdcLzIwMThcL2NyZWRlbnRpYWxzXC92MSJdfX0.x0SF17Y0VCDmt7HceOdTxfHlofsZmY18Rn6VQb0-r-k_Bm3hTi1-k2vkdjB25hdxyTCvxam-AkAP-Ag3Ahn5Ng\"]}"
+        val presentationSubmission = presentationSubmissionString
 
-            val vmAuthentication = DIDDocument.VerificationMethod(
-                id = DIDUrl(DID("2", "1", "0")),
-                controller = DID("2", "2", "0"),
-                type = Curve.ED25519.value,
-                publicKeyJwk = mapOf("crv" to Curve.ED25519.value, "x" to "")
-            )
+        val presentationDefinitionRequest =
+            """{"presentation_definition":{"id":"32f54163-7166-48f1-93d8-ff217bdb0653","input_descriptors":[{"id":"wa_driver_license","name":"Washington State Business License","purpose":"We can only allow licensed Washington State business representatives into the WA Business Conference","constraints":{"fields":[{"path":["${'$'}.credentialSubject.dateOfBirth","${'$'}.credentialSubject.dob","${'$'}.vc.credentialSubject.dateOfBirth","${'$'}.vc.credentialSubject.dob"]}]}}],"format":{"jwt":{"alg":["ES256K"]}}},"options":{"domain":"domain","challenge":"challenge"}}"""
+        val credential = JWTCredential.fromJwtString(
+            "eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MjU3MTlhOTZiMTUxMjA3MTY5ODFhODQzMGFkMGNiOTY4ZGQ1MzQwNzM1OTNjOGNkM2YxZDI3YTY4MDRlYzUwZTpDcG9DQ3BjQ0Vsb0tCV3RsZVMweEVBSkNUd29KYzJWamNESTFObXN4RWlBRW9TQ241dHlEYTZZNnItSW1TcXBKOFkxbWo3SkMzX29VekUwTnl5RWlDQm9nc2dOYWVSZGNDUkdQbGU4MlZ2OXRKZk53bDZyZzZWY2hSM09xaGlWYlRhOFNXd29HWVhWMGFDMHhFQVJDVHdvSmMyVmpjREkxTm1zeEVpRE1rQmQ2RnRpb0prM1hPRnUtX2N5NVhtUi00dFVRMk5MR2lXOGFJU29ta1JvZzZTZGU5UHduRzBRMFNCVG1GU1REYlNLQnZJVjZDVExYcmpJSnR0ZUdJbUFTWEFvSGJXRnpkR1Z5TUJBQlFrOEtDWE5sWTNBeU5UWnJNUklnTzcxMG10MVdfaXhEeVFNM3hJczdUcGpMQ05PRFF4Z1ZoeDVzaGZLTlgxb2FJSFdQcnc3SVVLbGZpYlF0eDZKazRUU2pnY1dOT2ZjT3RVOUQ5UHVaN1Q5dCIsInN1YiI6ImRpZDpwcmlzbTpiZWVhNTIzNGFmNDY4MDQ3MTRkOGVhOGVjNzdiNjZjYzdmM2U4MTVjNjhhYmI0NzVmMjU0Y2Y5YzMwNjI2NzYzOkNzY0JDc1FCRW1RS0QyRjFkR2hsYm5ScFkyRjBhVzl1TUJBRVFrOEtDWE5sWTNBeU5UWnJNUklnZVNnLTJPTzFKZG5welVPQml0eklpY1hkZnplQWNUZldBTi1ZQ2V1Q2J5SWFJSlE0R1RJMzB0YVZpd2NoVDNlMG5MWEJTNDNCNGo5amxzbEtvMlpsZFh6akVsd0tCMjFoYzNSbGNqQVFBVUpQQ2dselpXTndNalUyYXpFU0lIa29QdGpqdFNYWjZjMURnWXJjeUluRjNYODNnSEUzMWdEZm1BbnJnbThpR2lDVU9Ca3lOOUxXbFlzSElVOTN0Snkxd1V1TndlSV9ZNWJKU3FObVpYVjg0dyIsIm5iZiI6MTY4NTYzMTk5NSwiZXhwIjoxNjg1NjM1NTk1LCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJhZGRpdGlvbmFsUHJvcDIiOiJUZXN0MyIsImlkIjoiZGlkOnByaXNtOmJlZWE1MjM0YWY0NjgwNDcxNGQ4ZWE4ZWM3N2I2NmNjN2YzZTgxNWM2OGFiYjQ3NWYyNTRjZjljMzA2MjY3NjM6Q3NjQkNzUUJFbVFLRDJGMWRHaGxiblJwWTJGMGFXOXVNQkFFUWs4S0NYTmxZM0F5TlRack1SSWdlU2ctMk9PMUpkbnB6VU9CaXR6SWljWGRmemVBY1RmV0FOLVlDZXVDYnlJYUlKUTRHVEkzMHRhVml3Y2hUM2UwbkxYQlM0M0I0ajlqbHNsS28yWmxkWHpqRWx3S0IyMWhjM1JsY2pBUUFVSlBDZ2x6WldOd01qVTJhekVTSUhrb1B0amp0U1haNmMxRGdZcmN5SW5GM1g4M2dIRTMxZ0RmbUFucmdtOGlHaUNVT0JreU45TFdsWXNISVU5M3RKeTF3VXVOd2VJX1k1YkpTcU5tWlhWODR3In0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiXSwiQGNvbnRleHQiOlsiaHR0cHM6XC9cL3d3dy53My5vcmdcLzIwMThcL2NyZWRlbnRpYWxzXC92MSJdfX0.x0SF17Y0VCDmt7HceOdTxfHlofsZmY18Rn6VQb0-r-k_Bm3hTi1-k2vkdjB25hdxyTCvxam-AkAP-Ag3Ahn5Ng"
+        )
+        // Mock createPresentationSubmission response
+        `when`(polluxMock.createJWTPresentationSubmission(any(), any(), any())).thenReturn(
+//            `when`(polluxMock.createJWTPresentationSubmission(presentationDefinitionRequest, credential, privateKeys.first())).thenReturn(
+            presentationSubmission
+        )
 
-            val vmKeyAgreement = DIDDocument.VerificationMethod(
-                id = DIDUrl(DID("3", "1", "0")),
-                controller = DID("3", "2", "0"),
-                type = Curve.X25519.value,
-                publicKeyJwk = mapOf("crv" to Curve.X25519.value, "x" to "")
-            )
+        val agent = EdgeAgent(
+            apollo = apolloMock,
+            castor = castorMock,
+            pluto = plutoMock,
+            mercury = mercuryMock,
+            pollux = polluxMock,
+            connectionManager = connectionManagerMock,
+            seed = seed,
+            api = apiMock,
+            logger = LoggerMock()
+        )
+        val msg = Json.decodeFromString<Message>(
+            """{"id":"00000000-685c-4004-0000-000036ac64ee","piuri":"https://didcomm.atalaprism.io/present-proof/3.0/request-presentation","from":{"method":"peer","methodId":"asdfasdf"},"to":{"method":"peer","methodId":"fdsafdsa"},"fromPrior":null,"body":"{}","createdTime":"2024-03-08T19:27:38.196506Z","expiresTimePlus":"2024-03-09T19:27:38.196559Z","attachments":[{"id":"00000000-9c2e-4249-0000-0000c1176949","mediaType":"application/json","data":{"type":"org.hyperledger.identus.walletsdk.domain.models.AttachmentBase64","base64":"eyJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjMyZjU0MTYzLTcxNjYtNDhmMS05M2Q4LWZmMjE3YmRiMDY1MyIsImlucHV0X2Rlc2NyaXB0b3JzIjpbeyJpZCI6IndhX2RyaXZlcl9saWNlbnNlIiwibmFtZSI6Ildhc2hpbmd0b24gU3RhdGUgQnVzaW5lc3MgTGljZW5zZSIsInB1cnBvc2UiOiJXZSBjYW4gb25seSBhbGxvdyBsaWNlbnNlZCBXYXNoaW5ndG9uIFN0YXRlIGJ1c2luZXNzIHJlcHJlc2VudGF0aXZlcyBpbnRvIHRoZSBXQSBCdXNpbmVzcyBDb25mZXJlbmNlIiwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiIsIiQudmMuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLnZjLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiJdfV19fV0sImZvcm1hdCI6eyJqd3QiOnsiYWxnIjpbIkVTMjU2SyJdfX19LCAib3B0aW9ucyI6IHsiZG9tYWluIjogImRvbWFpbiIsICJjaGFsbGVuZ2UiOiAiY2hhbGxlbmdlIn19"},"format":"dif/presentation-exchange/definitions@v1.0"}],"thid":"00000000-ef9d-4722-0000-00003b1bc908","ack":[]}"""
+        )
+        val presentation = agent.preparePresentationForRequestProof(
+            RequestPresentation.fromMessage(msg),
+            credential
+        )
 
-            val resolverMock = mock<DIDResolver>()
-            val didDoc = DIDDocument(
-                id = DID("did:prism:asdfasdf"),
-                coreProperties = arrayOf(
-                    DIDDocument.Authentication(
-                        urls = emptyArray(),
-                        verificationMethods = arrayOf(vmAuthentication, vmKeyAgreement)
-                    )
-                )
-            )
-            // Mock resolve did response
-            `when`(castorMock.resolveDID(any())).thenReturn(didDoc)
-            `when`(resolverMock.resolve(any())).thenReturn(didDoc)
+        assertEquals("00000000-ef9d-4722-0000-00003b1bc908", presentation.thid)
+        assertEquals("did:peer:fdsafdsa", presentation.from.toString())
+        assertEquals("did:peer:asdfasdf", presentation.to.toString())
+        assertEquals(1, presentation.attachments.size)
+        val attachmentDescriptor = presentation.attachments.first()
+        val attachmentData = attachmentDescriptor.data
+        assertTrue(attachmentData is AttachmentBase64)
+        val expectedPresentationSubmission =
+            Json.decodeFromString<PresentationSubmission>(presentationSubmissionString)
+        val attachmentDataString = attachmentData.getDataAsJsonString()
+        val actualPresentationSubmission = Json.decodeFromString<PresentationSubmission>(attachmentDataString)
 
-            val agent = EdgeAgent(
-                apollo = apolloMock,
-                castor = castorMock,
-                pluto = plutoMock,
-                mercury = mercuryMock,
-                pollux = polluxMock,
-                connectionManager = connectionManagerMock,
-                seed = seed,
-                api = apiMock,
-                logger = LoggerMock()
-            )
+        assertEquals(
+            expectedPresentationSubmission,
+            actualPresentationSubmission
+        )
+    }
 
-            val msgString =
-                "{\"id\":\"00000000-621a-4ae9-0000-00002ffb05bf\",\"piuri\":\"https://didcomm.atalaprism.io/present-proof/3.0/presentation\",\"from\":{\"method\":\"peer\",\"methodId\":\"fdsafdsa\"},\"to\":{\"method\":\"peer\",\"methodId\":\"asdfasdf\"},\"fromPrior\":null,\"body\":\"{}\",\"createdTime\":\"2024-03-18T17:11:58.053680Z\",\"expiresTimePlus\":\"2024-03-19T17:11:58.058523Z\",\"attachments\":[{\"id\":\"00000000-ef5f-40c0-0000-0000d2674b80\",\"mediaType\":\"application/json\",\"data\":{\"type\":\"org.hyperledger.identus.walletsdk.domain.models.AttachmentJsonData\",\"data\":\"eyJwcmVzZW50YXRpb25fc3VibWlzc2lvbiI6eyJpZCI6IjAwMDAwMDAwLWMyMjQtNDVkNy0wMDAwLTAwMDA3MzJmNDkzMiIsImRlZmluaXRpb25faWQiOiIzMmY1NDE2My03MTY2LTQ4ZjEtOTNkOC1mZjIxN2JkYjA2NTMiLCJkZXNjcmlwdG9yX21hcCI6W3siaWQiOiJ3YV9kcml2ZXJfbGljZW5zZSIsImZvcm1hdCI6Imp3dF92cCIsInBhdGgiOiIkLnZlcmlmaWFibGVDcmVkZW50aWFsWzBdIn1dfSwidmVyaWZpYWJsZUNyZWRlbnRpYWwiOlt7InZjIjp7ImNvbnRleHQiOltdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIl0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImFkZGl0aW9uYWxQcm9wMiI6IlRlc3QzIiwiaWQiOiJkaWQ6cHJpc206YmVlYTUyMzRhZjQ2ODA0NzE0ZDhlYThlYzc3YjY2Y2M3ZjNlODE1YzY4YWJiNDc1ZjI1NGNmOWMzMDYyNjc2MzpDc2NCQ3NRQkVtUUtEMkYxZEdobGJuUnBZMkYwYVc5dU1CQUVRazhLQ1hObFkzQXlOVFpyTVJJZ2VTZy0yT08xSmRucHpVT0JpdHpJaWNYZGZ6ZUFjVGZXQU4tWUNldUNieUlhSUpRNEdUSTMwdGFWaXdjaFQzZTBuTFhCUzQzQjRqOWpsc2xLbzJabGRYempFbHdLQjIxaGMzUmxjakFRQVVKUENnbHpaV053TWpVMmF6RVNJSGtvUHRqanRTWFo2YzFEZ1lyY3lJbkYzWDgzZ0hFMzFnRGZtQW5yZ204aUdpQ1VPQmt5TjlMV2xZc0hJVTkzdEp5MXdVdU53ZUlfWTViSlNxTm1aWFY4NHcifX19XSwicHJvb2YiOnsidHlwZSI6IkVjZHNhU2VjcDI1NmsxU2lnbmF0dXJlMjAxOSIsImNyZWF0ZWQiOiIyOCBKdW5lIDU2MTU1LCAwNzozMToxMCIsInByb29mUHVycG9zZSI6ImF1dGhlbnRpY2F0aW9uIiwidmVyaWZpY2F0aW9uTWV0aG9kIjoiZGlkOnByaXNtOmFzZGZhc2RmYXNkZmFzZGYja2V5cy0xIiwiandzIjoiZXlKaGJHY2lPaUpGVXpJMU5rc2lmUS5leUpwYzNNaU9pSmthV1E2Y0hKcGMyMDZNalUzTVRsaE9UWmlNVFV4TWpBM01UWTVPREZoT0RRek1HRmtNR05pT1RZNFpHUTFNelF3TnpNMU9UTmpPR05rTTJZeFpESTNZVFk0TURSbFl6VXdaVHBEY0c5RFEzQmpRMFZzYjB0Q1YzUnNaVk13ZUVWQlNrTlVkMjlLWXpKV2FtTkVTVEZPYlhONFJXbEJSVzlUUTI0MWRIbEVZVFpaTm5JdFNXMVRjWEJLT0ZreGJXbzNTa016WDI5VmVrVXdUbmw1UldsRFFtOW5jMmRPWVdWU1pHTkRVa2RRYkdVNE1sWjJPWFJLWms1M2JEWnlaelpXWTJoU00wOXhhR2xXWWxSaE9GTlhkMjlIV1ZoV01HRkRNSGhGUVZKRFZIZHZTbU15Vm1walJFa3hUbTF6ZUVWcFJFMXJRbVEyUm5ScGIwcHJNMWhQUm5VdFgyTjVOVmh0VWkwMGRGVlJNazVNUjJsWE9HRkpVMjl0YTFKdlp6WlRaR1U1VUhkdVJ6QlJNRk5DVkcxR1UxUkVZbE5MUW5aSlZqWkRWRXhZY21wSlNuUjBaVWRKYlVGVFdFRnZTR0pYUm5wa1IxWjVUVUpCUWxGck9FdERXRTVzV1ROQmVVNVVXbkpOVWtsblR6Y3hNRzEwTVZkZmFYaEVlVkZOTTNoSmN6ZFVjR3BNUTA1UFJGRjRaMVpvZURWemFHWkxUbGd4YjJGSlNGZFFjbmMzU1ZWTGJHWnBZbEYwZURaS2F6UlVVMnBuWTFkT1QyWmpUM1JWT1VRNVVIVmFOMVE1ZENJc0luTjFZaUk2SW1ScFpEcHdjbWx6YlRwaVpXVmhOVEl6TkdGbU5EWTRNRFEzTVRSa09HVmhPR1ZqTnpkaU5qWmpZemRtTTJVNE1UVmpOamhoWW1JME56Vm1NalUwWTJZNVl6TXdOakkyTnpZek9rTnpZMEpEYzFGQ1JXMVJTMFF5UmpGa1IyaHNZbTVTY0ZreVJqQmhWemwxVFVKQlJWRnJPRXREV0U1c1dUTkJlVTVVV25KTlVrbG5aVk5uTFRKUFR6RktaRzV3ZWxWUFFtbDBla2xwWTFoa1pucGxRV05VWmxkQlRpMVpRMlYxUTJKNVNXRkpTbEUwUjFSSk16QjBZVlpwZDJOb1ZETmxNRzVNV0VKVE5ETkNOR281YW14emJFdHZNbHBzWkZoNmFrVnNkMHRDTWpGb1l6TlNiR05xUVZGQlZVcFFRMmRzZWxwWFRuZE5hbFV5WVhwRlUwbElhMjlRZEdwcWRGTllXalpqTVVSbldYSmplVWx1UmpOWU9ETm5TRVV6TVdkRVptMUJibkpuYlRocFIybERWVTlDYTNsT09VeFhiRmx6U0VsVk9UTjBTbmt4ZDFWMVRuZGxTVjlaTldKS1UzRk9iVnBZVmpnMGR5SXNJbTVpWmlJNk1UWTROVFl6TVRrNU5Td2laWGh3SWpveE5qZzFOak0xTlRrMUxDSjJZeUk2ZXlKamNtVmtaVzUwYVdGc1UzVmlhbVZqZENJNmV5SmhaR1JwZEdsdmJtRnNVSEp2Y0RJaU9pSlVaWE4wTXlJc0ltbGtJam9pWkdsa09uQnlhWE50T21KbFpXRTFNak0wWVdZME5qZ3dORGN4TkdRNFpXRTRaV00zTjJJMk5tTmpOMll6WlRneE5XTTJPR0ZpWWpRM05XWXlOVFJqWmpsak16QTJNalkzTmpNNlEzTmpRa056VVVKRmJWRkxSREpHTVdSSGFHeGlibEp3V1RKR01HRlhPWFZOUWtGRlVXczRTME5ZVG14Wk0wRjVUbFJhY2sxU1NXZGxVMmN0TWs5UE1VcGtibkI2VlU5Q2FYUjZTV2xqV0dSbWVtVkJZMVJtVjBGT0xWbERaWFZEWW5sSllVbEtVVFJIVkVrek1IUmhWbWwzWTJoVU0yVXdia3hZUWxNME0wSTBhamxxYkhOc1MyOHlXbXhrV0hwcVJXeDNTMEl5TVdoak0xSnNZMnBCVVVGVlNsQkRaMng2V2xkT2QwMXFWVEpoZWtWVFNVaHJiMUIwYW1wMFUxaGFObU14UkdkWmNtTjVTVzVHTTFnNE0yZElSVE14WjBSbWJVRnVjbWR0T0dsSGFVTlZUMEpyZVU0NVRGZHNXWE5JU1ZVNU0zUktlVEYzVlhWT2QyVkpYMWsxWWtwVGNVNXRXbGhXT0RSM0luMHNJblI1Y0dVaU9sc2lWbVZ5YVdacFlXSnNaVU55WldSbGJuUnBZV3dpWFN3aVFHTnZiblJsZUhRaU9sc2lhSFIwY0hNNlhDOWNMM2QzZHk1M015NXZjbWRjTHpJd01UaGNMMk55WldSbGJuUnBZV3h6WEM5Mk1TSmRmWDAueDBTRjE3WTBWQ0RtdDdIY2VPZFR4Zkhsb2ZzWm1ZMThSbjZWUWIwLXIta19CbTNoVGkxLWsydmtkakIyNWhkeHlUQ3Z4YW0tQWtBUC1BZzNBaG41TmciLCJjaGFsbGVuZ2UiOiIzMDQ1MDIyMTAwYjE0MTJjMGYzZmJiYzVjODc2ZGRlNjExNDFmYTY4N2Y3ZjJmYWJhODM0YWJjZTA5Yzg2YzcwNWEwYjkwMjAwNTAyMjA2YjY3MjUzZmE1ZjgwMzQ0YzQyZGQ4NGQyMzZiYmJiMTVkNTBhODliODE2ZmE1NWQ1YTZhNzQyY2NjODYwZTIzIn19\"},\"format\":\"prism/jwt\"}],\"thid\":\"00000000-ef9d-4722-0000-00003b1bc908\",\"ack\":[]}"
-            val msg = Json.decodeFromString<Message>(msgString)
+    @Test
+    fun testPreparePresentationForRequestProof_whenJWTProof_thenSendPresentationCorrectly() = runTest {
+        val apiMock = mock<Api>()
+        `when`(apiMock.request(any(), any(), any(), any(), any()))
+            .thenReturn(HttpResponse(200, "Ok"))
 
-            assertFailsWith<NullPointerException> {
-                agent.handlePresentation(msg)
-            }
+        val provableCredentialMock = mock<ProvableCredential>()
+        val connectionManagerMock = mock<ConnectionManager>()
+
+        val json = Json {
+            ignoreUnknownKeys = true
         }
+        val requestPresentationJson =
+            """{"id":"581f9d51-bb0c-4bcd-a851-487a14d30cc6","piuri":"https://didcomm.atalaprism.io/present-proof/3.0/request-presentation","from":{"method":"peer","methodId":"2.Ez6LScuoWiuQHfk4Js2aMC4Qs8rD5zNUfmiNfWMCb2pWR3FAc.Vz6MkvKtf2JqqcxhC1MPmWbWPrxqt8A4v44zri36XHgNmsmgV.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly8xOTIuMTY4LjY4LjExMzo4MDAwL2RpZGNvbW0iLCJyIjpbXSwiYSI6WyJkaWRjb21tL3YyIl19fQ"},"to":{"method":"peer","methodId":"2.Ez6LSmuL2dNc6wg5HpqDcDBXnNDG6TawcrBuxZbFkW9Hberjq.Vz6MkvcyMv5VAbTTttvNpo3YYku9Y8VMR9kRw8SFjAX8ic7JU.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6ImRpZDpwZWVyOjIuRXo2TFNnaHdTRTQzN3duREUxcHQzWDZoVkRVUXpTanNIemlucFgzWEZ2TWpSQW03eS5WejZNa2hoMWU1Q0VZWXE2SkJVY1RaNkNwMnJhbkNXUnJ2N1lheDNMZTRONTlSNmRkLlNleUowSWpvaVpHMGlMQ0p6SWpwN0luVnlhU0k2SW1oMGRIQnpPaTh2YzJsMExYQnlhWE50TFcxbFpHbGhkRzl5TG1GMFlXeGhjSEpwYzIwdWFXOGlMQ0poSWpwYkltUnBaR052YlcwdmRqSWlYWDE5LlNleUowSWpvaVpHMGlMQ0p6SWpwN0luVnlhU0k2SW5kemN6b3ZMM05wZEMxd2NtbHpiUzF0WldScFlYUnZjaTVoZEdGc1lYQnlhWE50TG1sdkwzZHpJaXdpWVNJNld5SmthV1JqYjIxdEwzWXlJbDE5ZlEiLCJyIjpbXSwiYSI6W119fQ"},"fromPrior":"null","body":{"goal_code":"Request Proof Presentation","comment":null,"proof_types":[],"will_confirm":false},"createdTime":"1718228880","expiresTimePlus":"2024-06-13T21:48:02.636794Z","attachments":[{"id":"e784ac49-bb2d-4445-9cac-edd365664c73","data":{"type":"org.hyperledger.identus.walletsdk.domain.models.AttachmentJsonData","data":"{\"options\":{\"domain\":\"https:\\/\\/prism-verifier.com\",\"challenge\":\"11c91493-01b3-4c4d-ac36-b336bab5bddf\"},\"presentation_definition\":{\"purpose\":null,\"format\":null,\"name\":null,\"input_descriptors\":[],\"id\":\"56108c4a-ca57-40b6-89f0-1e1a2fa186fd\"}}"},"format":"prism/jwt"}],"thid":"c7cdff93-2706-4023-8d3c-3ce850ab0b2d","ack":[]}"""
+        val requestPresentation = json.decodeFromString<RequestPresentation>(requestPresentationJson)
+
+        val agent = EdgeAgent(
+            apollo = apolloMock,
+            castor = castorMock,
+            pluto = plutoMock,
+            mercury = mercuryMockOld,
+            pollux = polluxMock,
+            connectionManager = connectionManagerMock,
+            seed = seed,
+            api = apiMock,
+            logger = LoggerMock()
+        )
+
+        val credential = JWTCredential.fromJwtString(
+            "eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MzM3ZThmZTE0NGFhY2VkM2NhM2RkNTk0NjI0MDRmNDU5OTZlM2IyMjFhYmM0MTBhNzI1ZWE2NjUzNDg5NzJiYjpDcmtCQ3JZQkVqb0tCbUYxZEdndE1SQUVTaTRLQ1hObFkzQXlOVFpyTVJJaEF2eWcxYTN1cHVmbFBLczhKR1hKU3NxV1pjVG9GQXk3RjNSTFBjQlk0V25zRWpzS0IybHpjM1ZsTFRFUUFrb3VDZ2x6WldOd01qVTJhekVTSVFPYVBUbzM5Tnh2UmhXUW5iVWhoTXM5bTFIeEJtcV9hZWNHM0tTTGZiNWgzUkk3Q2dkdFlYTjBaWEl3RUFGS0xnb0pjMlZqY0RJMU5tc3hFaUVEZ3poOElDY1ZhNVlNZjYzRFFaM191dTNOMzNsSXVGSGJoX09KUlVIbWd2YyIsInN1YiI6ImRpZDpwcmlzbTpiZDgxZmY1NDQzNDJjMTAwNDZkZmE0YmEyOTVkNWIzNmU0Y2ZlNWE3ZWIxMjBlMTBlZTVjMjQ4NzAwNjUxMDA5OkNvVUJDb0lCRWpzS0IyMWhjM1JsY2pBUUFVb3VDZ2x6WldOd01qVTJhekVTSVFQdjVQNXl5Z3Jad2FKbFl6bDU5bTJIQURLVFhVTFBzUmUwa2dlRUh2dExnQkpEQ2c5aGRYUm9aVzUwYVdOaGRHbHZiakFRQkVvdUNnbHpaV053TWpVMmF6RVNJUVB2NVA1eXlnclp3YUpsWXpsNTltMkhBREtUWFVMUHNSZTBrZ2VFSHZ0TGdBIiwibmJmIjoxNzE4MjI1MDUyLCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJlbWFpbEFkZHJlc3MiOiJkZW1vQGVtYWlsLmNvbSIsImRyaXZpbmdDbGFzcyI6IjEiLCJmYW1pbHlOYW1lIjoiZGVtbyIsImRyaXZpbmdMaWNlbnNlSUQiOiJBMTIyMTMzMiIsImlkIjoiZGlkOnByaXNtOmJkODFmZjU0NDM0MmMxMDA0NmRmYTRiYTI5NWQ1YjM2ZTRjZmU1YTdlYjEyMGUxMGVlNWMyNDg3MDA2NTEwMDk6Q29VQkNvSUJFanNLQjIxaGMzUmxjakFRQVVvdUNnbHpaV053TWpVMmF6RVNJUVB2NVA1eXlnclp3YUpsWXpsNTltMkhBREtUWFVMUHNSZTBrZ2VFSHZ0TGdCSkRDZzloZFhSb1pXNTBhV05oZEdsdmJqQVFCRW91Q2dselpXTndNalUyYXpFU0lRUHY1UDV5eWdyWndhSmxZemw1OW0ySEFES1RYVUxQc1JlMGtnZUVIdnRMZ0EiLCJkYXRlT2ZJc3N1YW5jZSI6IjAxXC8wMVwvMjAyNCJ9LCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIl0sIkBjb250ZXh0IjpbImh0dHBzOlwvXC93d3cudzMub3JnXC8yMDE4XC9jcmVkZW50aWFsc1wvdjEiXSwiY3JlZGVudGlhbFN0YXR1cyI6eyJzdGF0dXNQdXJwb3NlIjoiUmV2b2NhdGlvbiIsInN0YXR1c0xpc3RJbmRleCI6NCwiaWQiOiJodHRwOlwvXC8xOTIuMTY4LjY4LjExMzo4MDAwXC9wcmlzbS1hZ2VudFwvY3JlZGVudGlhbC1zdGF0dXNcLzM5YjBiNzI2LTBmNmUtNDlmNy05YzUyLTYyYTc4MTcxNzVlOCM0IiwidHlwZSI6IlN0YXR1c0xpc3QyMDIxRW50cnkiLCJzdGF0dXNMaXN0Q3JlZGVudGlhbCI6Imh0dHA6XC9cLzE5Mi4xNjguNjguMTEzOjgwMDBcL3ByaXNtLWFnZW50XC9jcmVkZW50aWFsLXN0YXR1c1wvMzliMGI3MjYtMGY2ZS00OWY3LTljNTItNjJhNzgxNzE3NWU4In19fQ.XuMkGkJQCM5214ZjxwdHf81Jox_qyGsh011OmRtda8lTsh6TFPy9jDNey0DVijCg12qDTj-cYcFUAXe6pfvoPQ"
+        )
+
+        val pathIndexFlow = flow { emit(1) }
+        `when`(plutoMock.getPrismDIDKeyPathIndex(DID(credential.subject!!))).thenReturn(pathIndexFlow)
+
+        val testVerifiablePresentationJWTPayload = "testPayload"
+        `when`(polluxMock.createJWTPresentationSubmission(any(), any(), any())).thenReturn(
+            testVerifiablePresentationJWTPayload
+        )
+
+        val presentation = agent.preparePresentationForRequestProof(
+            requestPresentation,
+            credential
+        )
+        assertEquals(requestPresentation.thid, presentation.thid)
+        assertEquals(requestPresentation.to.toString(), presentation.from.toString())
+        assertEquals(requestPresentation.from.toString(), presentation.to.toString())
+        assertEquals(1, presentation.attachments.size)
+        val attachmentDescriptor = presentation.attachments.first()
+        assertEquals(CredentialType.JWT.type, attachmentDescriptor.mediaType)
+        val attachmentData = attachmentDescriptor.data
+        assertTrue(attachmentData is AttachmentBase64)
+        assertEquals(
+            3,
+            attachmentData.getDataAsJsonString().split(".").count()
+        )
+    }
+
+    @Test
+    fun testHandlePresentationSubmission_whenAttachmentNotSupported_thenThrowsAttachmentTypeNotSupported() = runTest {
+        val apiMock = mock<Api>()
+        `when`(apiMock.request(any(), any(), any(), any(), any()))
+            .thenReturn(HttpResponse(200, "Ok"))
+
+        val apolloMock = mock<Apollo>()
+        val castorMock = mock<Castor>()
+        val plutoMock = mock<Pluto>()
+        val mercuryMock = mock<Mercury>()
+        val polluxMock = mock<Pollux>()
+        val connectionManagerMock = mock<ConnectionManager>()
+        val seed = Seed(MnemonicHelper.createRandomSeed())
+
+        val privateKeys = listOf(
+            Secp256k1KeyPair.generateKeyPair(
+                seed = Seed(MnemonicHelper.createRandomSeed()),
+                curve = KeyCurve(Curve.SECP256K1)
+            ).privateKey
+        )
+        val storablePrivateKeys = listOf(
+            StorablePrivateKey(
+                id = UUID.randomUUID().toString(),
+                restorationIdentifier = "secp256k1+priv",
+                data = privateKeys.first().raw.base64UrlEncoded,
+                keyPathIndex = 0
+            )
+        )
+        // Mock getDIDPrivateKeysByDID response
+        `when`(plutoMock.getDIDPrivateKeysByDID(any())).thenReturn(flow { emit(storablePrivateKeys) })
+
+        val presentationSubmission =
+            """{"presentation_submission":{"id":"00000000-c224-45d7-0000-0000732f4932","definition_id":"32f54163-7166-48f1-93d8-ff217bdb0653","descriptor_map":[{"id":"wa_driver_license","format":"jwt","path":"${'$'}.verifiablePresentation[0]"}]},"verifiablePresentation":["eyJhbGciOiJFUzI1NksifQ.eyJpc3MiOiJkaWQ6cHJpc206MjU3MTlhOTZiMTUxMjA3MTY5ODFhODQzMGFkMGNiOTY4ZGQ1MzQwNzM1OTNjOGNkM2YxZDI3YTY4MDRlYzUwZTpDcG9DQ3BjQ0Vsb0tCV3RsZVMweEVBSkNUd29KYzJWamNESTFObXN4RWlBRW9TQ241dHlEYTZZNnItSW1TcXBKOFkxbWo3SkMzX29VekUwTnl5RWlDQm9nc2dOYWVSZGNDUkdQbGU4MlZ2OXRKZk53bDZyZzZWY2hSM09xaGlWYlRhOFNXd29HWVhWMGFDMHhFQVJDVHdvSmMyVmpjREkxTm1zeEVpRE1rQmQ2RnRpb0prM1hPRnUtX2N5NVhtUi00dFVRMk5MR2lXOGFJU29ta1JvZzZTZGU5UHduRzBRMFNCVG1GU1REYlNLQnZJVjZDVExYcmpJSnR0ZUdJbUFTWEFvSGJXRnpkR1Z5TUJBQlFrOEtDWE5sWTNBeU5UWnJNUklnTzcxMG10MVdfaXhEeVFNM3hJczdUcGpMQ05PRFF4Z1ZoeDVzaGZLTlgxb2FJSFdQcnc3SVVLbGZpYlF0eDZKazRUU2pnY1dOT2ZjT3RVOUQ5UHVaN1Q5dCIsInN1YiI6ImRpZDpwcmlzbTpiZWVhNTIzNGFmNDY4MDQ3MTRkOGVhOGVjNzdiNjZjYzdmM2U4MTVjNjhhYmI0NzVmMjU0Y2Y5YzMwNjI2NzYzOkNzY0JDc1FCRW1RS0QyRjFkR2hsYm5ScFkyRjBhVzl1TUJBRVFrOEtDWE5sWTNBeU5UWnJNUklnZVNnLTJPTzFKZG5welVPQml0eklpY1hkZnplQWNUZldBTi1ZQ2V1Q2J5SWFJSlE0R1RJMzB0YVZpd2NoVDNlMG5MWEJTNDNCNGo5amxzbEtvMlpsZFh6akVsd0tCMjFoYzNSbGNqQVFBVUpQQ2dselpXTndNalUyYXpFU0lIa29QdGpqdFNYWjZjMURnWXJjeUluRjNYODNnSEUzMWdEZm1BbnJnbThpR2lDVU9Ca3lOOUxXbFlzSElVOTN0Snkxd1V1TndlSV9ZNWJKU3FObVpYVjg0dyIsIm5iZiI6MTY4NTYzMTk5NSwiZXhwIjoxNjg1NjM1NTk1LCJ2YyI6eyJjcmVkZW50aWFsU3ViamVjdCI6eyJhZGRpdGlvbmFsUHJvcDIiOiJUZXN0MyIsImlkIjoiZGlkOnByaXNtOmJlZWE1MjM0YWY0NjgwNDcxNGQ4ZWE4ZWM3N2I2NmNjN2YzZTgxNWM2OGFiYjQ3NWYyNTRjZjljMzA2MjY3NjM6Q3NjQkNzUUJFbVFLRDJGMWRHaGxiblJwWTJGMGFXOXVNQkFFUWs4S0NYTmxZM0F5TlRack1SSWdlU2ctMk9PMUpkbnB6VU9CaXR6SWljWGRmemVBY1RmV0FOLVlDZXVDYnlJYUlKUTRHVEkzMHRhVml3Y2hUM2UwbkxYQlM0M0I0ajlqbHNsS28yWmxkWHpqRWx3S0IyMWhjM1JsY2pBUUFVSlBDZ2x6WldOd01qVTJhekVTSUhrb1B0amp0U1haNmMxRGdZcmN5SW5GM1g4M2dIRTMxZ0RmbUFucmdtOGlHaUNVT0JreU45TFdsWXNISVU5M3RKeTF3VXVOd2VJX1k1YkpTcU5tWlhWODR3In0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiXSwiQGNvbnRleHQiOlsiaHR0cHM6XC9cL3d3dy53My5vcmdcLzIwMThcL2NyZWRlbnRpYWxzXC92MSJdfX0.x0SF17Y0VCDmt7HceOdTxfHlofsZmY18Rn6VQb0-r-k_Bm3hTi1-k2vkdjB25hdxyTCvxam-AkAP-Ag3Ahn5Ng"]}"""
+        // Mock createPresentationSubmission response
+        `when`(polluxMock.createJWTPresentationSubmission(any(), any(), any())).thenReturn(
+            presentationSubmission
+        )
+
+        val vmAuthentication = DIDDocument.VerificationMethod(
+            id = DIDUrl(DID("2", "1", "0")),
+            controller = DID("2", "2", "0"),
+            type = Curve.ED25519.value,
+            publicKeyJwk = mapOf("crv" to Curve.ED25519.value, "x" to "")
+        )
+
+        val vmKeyAgreement = DIDDocument.VerificationMethod(
+            id = DIDUrl(DID("3", "1", "0")),
+            controller = DID("3", "2", "0"),
+            type = Curve.X25519.value,
+            publicKeyJwk = mapOf("crv" to Curve.X25519.value, "x" to "")
+        )
+
+        val resolverMock = mock<DIDResolver>()
+        val didDoc = DIDDocument(
+            id = DID("did:prism:asdfasdf"),
+            coreProperties = arrayOf(
+                DIDDocument.Authentication(
+                    urls = emptyArray(),
+                    verificationMethods = arrayOf(vmAuthentication, vmKeyAgreement)
+                )
+            )
+        )
+        // Mock resolve did response
+        `when`(castorMock.resolveDID(any())).thenReturn(didDoc)
+        `when`(resolverMock.resolve(any())).thenReturn(didDoc)
+
+        val agent = EdgeAgent(
+            apollo = apolloMock,
+            castor = castorMock,
+            pluto = plutoMock,
+            mercury = mercuryMock,
+            pollux = polluxMock,
+            connectionManager = connectionManagerMock,
+            seed = seed,
+            api = apiMock,
+            logger = LoggerMock()
+        )
+
+        val msgString =
+            "{\"id\":\"00000000-621a-4ae9-0000-00002ffb05bf\",\"piuri\":\"https://didcomm.atalaprism.io/present-proof/3.0/presentation\",\"from\":{\"method\":\"peer\",\"methodId\":\"fdsafdsa\"},\"to\":{\"method\":\"peer\",\"methodId\":\"asdfasdf\"},\"fromPrior\":null,\"body\":\"{}\",\"createdTime\":\"2024-03-18T17:11:58.053680Z\",\"expiresTimePlus\":\"2024-03-19T17:11:58.058523Z\",\"attachments\":[{\"id\":\"00000000-ef5f-40c0-0000-0000d2674b80\",\"mediaType\":\"application/json\",\"data\":{\"type\":\"org.hyperledger.identus.walletsdk.domain.models.AttachmentJsonData\",\"data\":\"eyJwcmVzZW50YXRpb25fc3VibWlzc2lvbiI6eyJpZCI6IjAwMDAwMDAwLWMyMjQtNDVkNy0wMDAwLTAwMDA3MzJmNDkzMiIsImRlZmluaXRpb25faWQiOiIzMmY1NDE2My03MTY2LTQ4ZjEtOTNkOC1mZjIxN2JkYjA2NTMiLCJkZXNjcmlwdG9yX21hcCI6W3siaWQiOiJ3YV9kcml2ZXJfbGljZW5zZSIsImZvcm1hdCI6Imp3dF92cCIsInBhdGgiOiIkLnZlcmlmaWFibGVDcmVkZW50aWFsWzBdIn1dfSwidmVyaWZpYWJsZUNyZWRlbnRpYWwiOlt7InZjIjp7ImNvbnRleHQiOltdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIl0sImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImFkZGl0aW9uYWxQcm9wMiI6IlRlc3QzIiwiaWQiOiJkaWQ6cHJpc206YmVlYTUyMzRhZjQ2ODA0NzE0ZDhlYThlYzc3YjY2Y2M3ZjNlODE1YzY4YWJiNDc1ZjI1NGNmOWMzMDYyNjc2MzpDc2NCQ3NRQkVtUUtEMkYxZEdobGJuUnBZMkYwYVc5dU1CQUVRazhLQ1hObFkzQXlOVFpyTVJJZ2VTZy0yT08xSmRucHpVT0JpdHpJaWNYZGZ6ZUFjVGZXQU4tWUNldUNieUlhSUpRNEdUSTMwdGFWaXdjaFQzZTBuTFhCUzQzQjRqOWpsc2xLbzJabGRYempFbHdLQjIxaGMzUmxjakFRQVVKUENnbHpaV053TWpVMmF6RVNJSGtvUHRqanRTWFo2YzFEZ1lyY3lJbkYzWDgzZ0hFMzFnRGZtQW5yZ204aUdpQ1VPQmt5TjlMV2xZc0hJVTkzdEp5MXdVdU53ZUlfWTViSlNxTm1aWFY4NHcifX19XSwicHJvb2YiOnsidHlwZSI6IkVjZHNhU2VjcDI1NmsxU2lnbmF0dXJlMjAxOSIsImNyZWF0ZWQiOiIyOCBKdW5lIDU2MTU1LCAwNzozMToxMCIsInByb29mUHVycG9zZSI6ImF1dGhlbnRpY2F0aW9uIiwidmVyaWZpY2F0aW9uTWV0aG9kIjoiZGlkOnByaXNtOmFzZGZhc2RmYXNkZmFzZGYja2V5cy0xIiwiandzIjoiZXlKaGJHY2lPaUpGVXpJMU5rc2lmUS5leUpwYzNNaU9pSmthV1E2Y0hKcGMyMDZNalUzTVRsaE9UWmlNVFV4TWpBM01UWTVPREZoT0RRek1HRmtNR05pT1RZNFpHUTFNelF3TnpNMU9UTmpPR05rTTJZeFpESTNZVFk0TURSbFl6VXdaVHBEY0c5RFEzQmpRMFZzYjB0Q1YzUnNaVk13ZUVWQlNrTlVkMjlLWXpKV2FtTkVTVEZPYlhONFJXbEJSVzlUUTI0MWRIbEVZVFpaTm5JdFNXMVRjWEJLT0ZreGJXbzNTa016WDI5VmVrVXdUbmw1UldsRFFtOW5jMmRPWVdWU1pHTkRVa2RRYkdVNE1sWjJPWFJLWms1M2JEWnlaelpXWTJoU00wOXhhR2xXWWxSaE9GTlhkMjlIV1ZoV01HRkRNSGhGUVZKRFZIZHZTbU15Vm1walJFa3hUbTF6ZUVWcFJFMXJRbVEyUm5ScGIwcHJNMWhQUm5VdFgyTjVOVmh0VWkwMGRGVlJNazVNUjJsWE9HRkpVMjl0YTFKdlp6WlRaR1U1VUhkdVJ6QlJNRk5DVkcxR1UxUkVZbE5MUW5aSlZqWkRWRXhZY21wSlNuUjBaVWRKYlVGVFdFRnZTR0pYUm5wa1IxWjVUVUpCUWxGck9FdERXRTVzV1ROQmVVNVVXbkpOVWtsblR6Y3hNRzEwTVZkZmFYaEVlVkZOTTNoSmN6ZFVjR3BNUTA1UFJGRjRaMVpvZURWemFHWkxUbGd4YjJGSlNGZFFjbmMzU1ZWTGJHWnBZbEYwZURaS2F6UlVVMnBuWTFkT1QyWmpUM1JWT1VRNVVIVmFOMVE1ZENJc0luTjFZaUk2SW1ScFpEcHdjbWx6YlRwaVpXVmhOVEl6TkdGbU5EWTRNRFEzTVRSa09HVmhPR1ZqTnpkaU5qWmpZemRtTTJVNE1UVmpOamhoWW1JME56Vm1NalUwWTJZNVl6TXdOakkyTnpZek9rTnpZMEpEYzFGQ1JXMVJTMFF5UmpGa1IyaHNZbTVTY0ZreVJqQmhWemwxVFVKQlJWRnJPRXREV0U1c1dUTkJlVTVVV25KTlVrbG5aVk5uTFRKUFR6RktaRzV3ZWxWUFFtbDBla2xwWTFoa1pucGxRV05VWmxkQlRpMVpRMlYxUTJKNVNXRkpTbEUwUjFSSk16QjBZVlpwZDJOb1ZETmxNRzVNV0VKVE5ETkNOR281YW14emJFdHZNbHBzWkZoNmFrVnNkMHRDTWpGb1l6TlNiR05xUVZGQlZVcFFRMmRzZWxwWFRuZE5hbFV5WVhwRlUwbElhMjlRZEdwcWRGTllXalpqTVVSbldYSmplVWx1UmpOWU9ETm5TRVV6TVdkRVptMUJibkpuYlRocFIybERWVTlDYTNsT09VeFhiRmx6U0VsVk9UTjBTbmt4ZDFWMVRuZGxTVjlaTldKS1UzRk9iVnBZVmpnMGR5SXNJbTVpWmlJNk1UWTROVFl6TVRrNU5Td2laWGh3SWpveE5qZzFOak0xTlRrMUxDSjJZeUk2ZXlKamNtVmtaVzUwYVdGc1UzVmlhbVZqZENJNmV5SmhaR1JwZEdsdmJtRnNVSEp2Y0RJaU9pSlVaWE4wTXlJc0ltbGtJam9pWkdsa09uQnlhWE50T21KbFpXRTFNak0wWVdZME5qZ3dORGN4TkdRNFpXRTRaV00zTjJJMk5tTmpOMll6WlRneE5XTTJPR0ZpWWpRM05XWXlOVFJqWmpsak16QTJNalkzTmpNNlEzTmpRa056VVVKRmJWRkxSREpHTVdSSGFHeGlibEp3V1RKR01HRlhPWFZOUWtGRlVXczRTME5ZVG14Wk0wRjVUbFJhY2sxU1NXZGxVMmN0TWs5UE1VcGtibkI2VlU5Q2FYUjZTV2xqV0dSbWVtVkJZMVJtVjBGT0xWbERaWFZEWW5sSllVbEtVVFJIVkVrek1IUmhWbWwzWTJoVU0yVXdia3hZUWxNME0wSTBhamxxYkhOc1MyOHlXbXhrV0hwcVJXeDNTMEl5TVdoak0xSnNZMnBCVVVGVlNsQkRaMng2V2xkT2QwMXFWVEpoZWtWVFNVaHJiMUIwYW1wMFUxaGFObU14UkdkWmNtTjVTVzVHTTFnNE0yZElSVE14WjBSbWJVRnVjbWR0T0dsSGFVTlZUMEpyZVU0NVRGZHNXWE5JU1ZVNU0zUktlVEYzVlhWT2QyVkpYMWsxWWtwVGNVNXRXbGhXT0RSM0luMHNJblI1Y0dVaU9sc2lWbVZ5YVdacFlXSnNaVU55WldSbGJuUnBZV3dpWFN3aVFHTnZiblJsZUhRaU9sc2lhSFIwY0hNNlhDOWNMM2QzZHk1M015NXZjbWRjTHpJd01UaGNMMk55WldSbGJuUnBZV3h6WEM5Mk1TSmRmWDAueDBTRjE3WTBWQ0RtdDdIY2VPZFR4Zkhsb2ZzWm1ZMThSbjZWUWIwLXIta19CbTNoVGkxLWsydmtkakIyNWhkeHlUQ3Z4YW0tQWtBUC1BZzNBaG41TmciLCJjaGFsbGVuZ2UiOiIzMDQ1MDIyMTAwYjE0MTJjMGYzZmJiYzVjODc2ZGRlNjExNDFmYTY4N2Y3ZjJmYWJhODM0YWJjZTA5Yzg2YzcwNWEwYjkwMjAwNTAyMjA2YjY3MjUzZmE1ZjgwMzQ0YzQyZGQ4NGQyMzZiYmJiMTVkNTBhODliODE2ZmE1NWQ1YTZhNzQyY2NjODYwZTIzIn19\"},\"format\":\"prism/jwt\"}],\"thid\":\"00000000-ef9d-4722-0000-00003b1bc908\",\"ack\":[]}"
+        val msg = Json.decodeFromString<Message>(msgString)
+
+        assertFailsWith<NullPointerException> {
+            agent.handlePresentation(msg)
+        }
+    }
 
     @Test
     fun testHandlePresentationSubmission_whenJWT_thenReturnTrue() = runTest {
@@ -1599,7 +1589,7 @@ class EdgeAgentTests {
         )
         `when`(polluxMock.verifyPresentationSubmission(any(), any())).thenReturn(true)
 
-        val mockEcPublicKey = mock<ECPublicKey>()
+        val mockEcPublicKey = mock<PublicKey>()
         `when`(polluxMock.extractEcPublicKeyFromVerificationMethod(any())).thenReturn(
             arrayOf(
                 mockEcPublicKey
@@ -1738,10 +1728,9 @@ class EdgeAgentTests {
                     val revoked: Boolean
                 )
 
-                fun String.toRestorationId(): RestorationID =
-                    RestorationID.entries.first {
-                        it.value == this
-                    }
+                fun String.toRestorationId(): RestorationID = RestorationID.entries.first {
+                    it.value == this
+                }
 
                 val credentials = Json.decodeFromString<List<CredentialMock>>(getCredentials).map {
                     val currentCredential = when (it.restorationId.toRestorationId()) {

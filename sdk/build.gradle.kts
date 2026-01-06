@@ -81,6 +81,11 @@ val javadocJar by tasks.registering(Jar::class) {
 kotlin {
     androidTarget {
         publishAllLibraryVariants()
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
     }
 
     jvm {
@@ -202,6 +207,9 @@ android {
     defaultConfig {
         minSdk = 21
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

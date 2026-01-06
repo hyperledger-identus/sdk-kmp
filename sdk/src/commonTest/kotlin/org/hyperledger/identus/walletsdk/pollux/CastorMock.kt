@@ -6,6 +6,7 @@ import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocumentCoreProperty
 import org.hyperledger.identus.walletsdk.domain.models.DIDUrl
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 
@@ -21,6 +22,13 @@ class CastorMock : Castor {
     var verifySignatureReturn: Boolean = false
 
     override fun parseDID(did: String): DID {
+        TODO("Not yet implemented")
+    }
+
+    override fun createPrismDID(
+        keys: List<Pair<KeyPurpose, PublicKey>>,
+        services: Array<DIDDocument.Service>?
+    ): DID {
         TODO("Not yet implemented")
     }
 
