@@ -1,5 +1,7 @@
 package org.hyperledger.identus.walletsdk.castor
 
+import kotlinx.coroutines.test.runTest
+import org.hyperledger.identus.walletsdk.apollo.ApolloImpl
 import org.hyperledger.identus.walletsdk.castor.did.DIDParser
 import org.hyperledger.identus.walletsdk.domain.models.CastorError
 import kotlin.test.Test
@@ -89,5 +91,14 @@ class DIDParserTest {
             "2.Ez6LSmWXS6oahBFuVKi2HZ6bWe521uLdiDoPub9ExYM22ybj9.Vz6MkigNVs7sPs4i38uYqiBzbMJ5YKzfK3Re11e3mdL5YpqpV",
             parsedDID.methodId
         )
+    }
+
+    @Test
+    fun testResolveLongPrismDID() = runTest {
+        val did = "did:prism:cd71c0f451d5f7c9afa2fbba9a75c4a7548392df189c796f162fa3f85c62d1eb:CokCCoYCElwKB21hc3RlcjAQAUJPCglzZWNwMjU2azESIGNrl5zOnGcqrXEIooE0HLqLHJ6XHygMkeueXoYQWhkgGiDWBpNGD8LUKqOydRTUvXxD4SSnGA-9vNX4hYbk5lxIwRJACg9hdXRoZW50aWNhdGlvbjAQBEorCgdFZDI1NTE5EiB2bl_YZ1HkFoelHEHxtMSW8T_SAgLanjTgyzH2zAn3XhJkCg9hdXRoZW50aWNhdGlvbjEQBEJPCglzZWNwMjU2azESIGtJzR15uDjvzeJS4dq4hMWSh-6kn7lEPV3-EmUCkgSSGiDLCZhLdn-iyGecJs5YxexFTERVO1VKs8s8FSQZV8LNAQ"
+        val apollo = ApolloImpl()
+        val castor = CastorImpl(apollo)
+        val resolved = castor.resolveDID(did)
+//        print(resolved)
     }
 }

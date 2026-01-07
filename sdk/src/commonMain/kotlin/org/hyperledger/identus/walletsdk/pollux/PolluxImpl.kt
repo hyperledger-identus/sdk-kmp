@@ -18,7 +18,10 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.crypto.Ed25519Signer
+import com.nimbusds.jose.crypto.Ed25519Verifier
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton
+import com.nimbusds.jose.jwk.OctetKeyPair
 import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
@@ -27,13 +30,8 @@ import io.ktor.http.HttpMethod
 import io.setl.rdf.normalization.RdfNormalize
 import java.io.ByteArrayInputStream
 import java.io.StringWriter
-import java.math.BigInteger
-import java.security.KeyFactory
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
-import java.security.spec.ECParameterSpec
-import java.security.spec.ECPoint
-import java.security.spec.ECPublicKeySpec
 import java.util.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -45,12 +43,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.bouncycastle.jce.ECNamedCurveTable
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
 import org.didcommx.didcomm.common.Typ
 import org.hyperledger.identus.apollo.base64.base64UrlDecoded
 import org.hyperledger.identus.apollo.base64.base64UrlDecodedBytes
-import org.hyperledger.identus.apollo.utils.KMMECSecp256k1PublicKey
+import org.hyperledger.identus.apollo.base64.base64UrlEncoded
 import org.hyperledger.identus.walletsdk.apollo.helpers.gunzip
 import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PrivateKey
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.PrismDIDPublicKey
@@ -110,6 +107,10 @@ import org.hyperledger.identus.walletsdk.pollux.models.SDJWTCredential
 import org.hyperledger.identus.walletsdk.pollux.models.VerificationKeyType
 import org.hyperledger.identus.walletsdk.pollux.models.W3CCredential
 import org.hyperledger.identus.walletsdk.pollux.utils.BitString
+import java.security.KeyFactory
+import java.security.spec.ECParameterSpec
+import java.security.spec.ECPoint
+import java.security.spec.ECPublicKeySpec
 
 /**
  * Class representing the implementation of the Pollux interface.
@@ -129,15 +130,13 @@ open class PolluxImpl(
      *
      * @param data The data representing the*/
     @Throws(PolluxError.InvalidCredentialError::class)
-    fun parseVerifiableCredential(data: String): Credential {
-        return try {
-            JWTCredential.fromJwtString(data)
+    fun parseVerifiableCredential(data: String): Credential = try {
+        JWTCredential.fromJwtString(data)
+    } catch (e: Exception) {
+        try {
+            Json.decodeFromString<W3CCredential>(data)
         } catch (e: Exception) {
-            try {
-                Json.decodeFromString<W3CCredential>(data)
-            } catch (e: Exception) {
-                throw PolluxError.InvalidCredentialError(cause = e.cause)
-            }
+            throw PolluxError.InvalidCredentialError(cause = e.cause)
         }
     }
 
@@ -298,23 +297,25 @@ open class PolluxImpl(
     override fun credentialToStorableCredential(
         type: CredentialType,
         credential: Credential
-    ): StorableCredential {
-        return when (type) {
-            CredentialType.JWT -> {
-                (credential as JWTCredential).toStorableCredential()
-            }
+    ): StorableCredential = when (type) {
+        CredentialType.JWT -> {
+            (credential as JWTCredential).toStorableCredential()
+        }
 
-            CredentialType.W3C -> {
-                (credential as W3CCredential).toStorableCredential()
-            }
+        CredentialType.SDJWT -> {
+            (credential as SDJWTCredential).toStorableCredential()
+        }
 
-            CredentialType.ANONCREDS_ISSUE -> {
-                (credential as AnonCredential).toStorableCredential()
-            }
+        CredentialType.W3C -> {
+            (credential as W3CCredential).toStorableCredential()
+        }
 
-            else -> {
-                throw PolluxError.InvalidCredentialError()
-            }
+        CredentialType.ANONCREDS_ISSUE -> {
+            (credential as AnonCredential).toStorableCredential()
+        }
+
+        else -> {
+            throw PolluxError.InvalidCredentialError()
         }
     }
 
@@ -330,7 +331,8 @@ open class PolluxImpl(
             CredentialType.ANONCREDS_OFFER.type,
             CredentialType.ANONCREDS_REQUEST.type,
             CredentialType.ANONCREDS_ISSUE.type,
-            CredentialType.ANONCREDS_PROOF_REQUEST.type
+            CredentialType.ANONCREDS_PROOF_REQUEST.type,
+            CredentialType.SDJWT.type
         )
         val foundFormat = formats.find { it.format in desiredFormats }
         return foundFormat?.format?.let { format ->
@@ -340,6 +342,7 @@ open class PolluxImpl(
                 CredentialType.ANONCREDS_REQUEST.type -> CredentialType.ANONCREDS_REQUEST
                 CredentialType.ANONCREDS_ISSUE.type -> CredentialType.ANONCREDS_ISSUE
                 CredentialType.ANONCREDS_PROOF_REQUEST.type -> CredentialType.ANONCREDS_PROOF_REQUEST
+                CredentialType.SDJWT.type -> CredentialType.SDJWT
                 else -> throw Error("$format is not a valid credential type")
             }
         } ?: throw Error("Unknown credential type")
@@ -598,13 +601,9 @@ open class PolluxImpl(
      * @param privateKey The PrivateKey to parse.
      * @return The parsed ECPrivateKey.
      */
-    internal fun parsePrivateKey(privateKey: PrivateKey): ECPrivateKey {
-        return privateKey.jca() as ECPrivateKey
-    }
+    internal fun parsePrivateKey(privateKey: PrivateKey): ECPrivateKey = privateKey.jca() as ECPrivateKey
 
-    private fun parsePublicKey(publicKey: PublicKey): ECPublicKey {
-        return publicKey.jca() as ECPublicKey
-    }
+    private fun parsePublicKey(publicKey: PublicKey): ECPublicKey = publicKey.jca() as ECPublicKey
 
     /**
      * Returns the domain from the given JsonObject.
@@ -612,9 +611,7 @@ open class PolluxImpl(
      * @param jsonObject The JsonObject from which to retrieve the domain.
      * @return The domain as a String, or null if not found.
      */
-    private fun getDomain(jsonObject: JsonObject): String? {
-        return jsonObject[OPTIONS]?.jsonObject?.get(DOMAIN)?.jsonPrimitive?.content
-    }
+    private fun getDomain(jsonObject: JsonObject): String? = jsonObject[OPTIONS]?.jsonObject?.get(DOMAIN)?.jsonPrimitive?.content
 
     /**
      * Retrieves the challenge value from the given JsonObject.
@@ -622,9 +619,7 @@ open class PolluxImpl(
      * @param jsonObject The JsonObject from which to retrieve the challenge.
      * @return The challenge value as a String, or null if not found in the JsonObject.
      */
-    private fun getChallenge(jsonObject: JsonObject): String? {
-        return jsonObject[OPTIONS]?.jsonObject?.get(CHALLENGE)?.jsonPrimitive?.content
-    }
+    private fun getChallenge(jsonObject: JsonObject): String? = jsonObject[OPTIONS]?.jsonObject?.get(CHALLENGE)?.jsonPrimitive?.content
 
     /**
      * Signs the claims for a request credential JWT.
@@ -640,9 +635,7 @@ open class PolluxImpl(
         privateKey: PrivateKey,
         domain: String,
         challenge: String
-    ): String {
-        return signClaims(subjectDID, privateKey, domain, challenge)
-    }
+    ): String = signClaims(subjectDID, privateKey, domain, challenge)
 
     /**
      * Signs the claims for a proof presentation JSON Web Token (JWT).
@@ -660,9 +653,7 @@ open class PolluxImpl(
         credential: Credential,
         domain: String,
         challenge: String
-    ): String {
-        return signClaims(subjectDID, privateKey, domain, challenge, credential)
-    }
+    ): String = signClaims(subjectDID, privateKey, domain, challenge, credential)
 
     /**
      * Signs the claims for a proof presentation JSON Web Token (JWT).
@@ -680,9 +671,7 @@ open class PolluxImpl(
         credential: Credential,
         domain: String,
         challenge: String
-    ): String {
-        return signClaims(subjectDID, privateKey, domain, challenge, credential)
-    }
+    ): String = signClaims(subjectDID, privateKey, domain, challenge, credential)
 
     /**
      * Signs the claims for a JWT.
@@ -704,7 +693,6 @@ open class PolluxImpl(
         if (privateKey !is ExportableKey) {
             throw PolluxError.PrivateKeyTypeNotSupportedError("The private key should be ${ExportableKey::class.simpleName}")
         }
-        val ecPrivateKey = parsePrivateKey(privateKey)
 
         val presentation: MutableMap<String, Collection<String>> = mutableMapOf(
             CONTEXT to setOf(CONTEXT_URL),
@@ -723,23 +711,51 @@ open class PolluxImpl(
 
         val kid = getSigningKid(subjectDID)
 
-        // Generate a JWS header with the ES256K algorithm
-        val header = JWSHeader.Builder(JWSAlgorithm.ES256K)
-            .keyID(kid)
-            .build()
+        when (privateKey.getCurve().lowercase()) {
+            "secp256k1" -> {
+                // Generate a JWS header with the ES256K algorithm
+                val header = JWSHeader.Builder(JWSAlgorithm.ES256K)
+                    .keyID(kid)
+                    .build()
+                val ecPrivateKey = parsePrivateKey(privateKey)
+                // Sign the JWT with the private key
+                val jwsObject = SignedJWT(header, claims)
+                val signer = ECDSASigner(
+                    ecPrivateKey as java.security.PrivateKey,
+                    com.nimbusds.jose.jwk.Curve.SECP256K1
+                )
+                val provider = BouncyCastleProviderSingleton.getInstance()
+                signer.jcaContext.provider = provider
+                jwsObject.sign(signer)
 
-        // Sign the JWT with the private key
-        val jwsObject = SignedJWT(header, claims)
-        val signer = ECDSASigner(
-            ecPrivateKey as java.security.PrivateKey,
-            com.nimbusds.jose.jwk.Curve.SECP256K1
-        )
-        val provider = BouncyCastleProviderSingleton.getInstance()
-        signer.jcaContext.provider = provider
-        jwsObject.sign(signer)
+                // Serialize the JWS object to a string
+                return jwsObject.serialize()
+            }
+            "ed25519" -> {
+                // Generate a JWS header with the ES256K algorithm
+                val header = JWSHeader.Builder(JWSAlgorithm.EdDSA)
+                    .keyID(kid)
+                    .build()
+                val d = privateKey.getValue()
+                val x = privateKey.publicKey().getValue()
+                val okp = OctetKeyPair.Builder(
+                    com.nimbusds.jose.jwk.Curve.Ed25519,
+                    Base64URL(x.base64UrlEncoded)
+                )
+                    .d(Base64URL(d.base64UrlEncoded))
+                    .build()
+                // Sign the JWT with the private key
+                val jwsObject = SignedJWT(header, claims)
+                val signer = Ed25519Signer(okp)
+                val provider = BouncyCastleProviderSingleton.getInstance()
+                signer.jcaContext.provider = provider
+                jwsObject.sign(signer)
 
-        // Serialize the JWS object to a string
-        return jwsObject.serialize()
+                // Serialize the JWS object to a string
+                return jwsObject.serialize()
+            }
+            else -> throw PolluxError.UnsupportedTypeError(privateKey.getCurve())
+        }
     }
 
     override suspend fun createPresentationDefinitionRequest(
@@ -1253,7 +1269,7 @@ open class PolluxImpl(
 
     internal fun verifyJWTSignatureWithEcPublicKey(
         jwtString: String,
-        ecPublicKeys: Array<ECPublicKey>
+        publicKeys: Array<PublicKey>
     ): Boolean {
         val jwtPartsIssuer = jwtString.split(".")
         if (jwtPartsIssuer.size != 3) {
@@ -1265,42 +1281,43 @@ open class PolluxImpl(
                 Base64URL(jwtPartsIssuer[1]),
                 Base64URL(jwtPartsIssuer[2])
             )
-        val areVerified = ecPublicKeys.map { ecPublicKey ->
-            val verifiers = ECDSAVerifier(ecPublicKey)
-            val provider = BouncyCastleProviderSingleton.getInstance()
-            verifiers.jcaContext.provider = provider
+        val areVerified = publicKeys.map { key ->
+            if (key.getCurve() == Curve.SECP256K1.value) {
+                val curveName = key.getCurve()
+                val sp = ECNamedCurveTable.getParameterSpec(curveName)
+                val q = sp.curve.decodePoint(key.raw)
+                val params: ECParameterSpec =
+                    ECNamedCurveSpec(sp.name, sp.curve, sp.g, sp.n, sp.h)
 
-            jwsObject.verify(verifiers)
+                val publicKeySpec = ECPublicKeySpec(ECPoint(q.affineXCoord.toBigInteger(), q.affineYCoord.toBigInteger()), params)
+                val provider = BouncyCastleProviderSingleton.getInstance()
+                val keyFactory = KeyFactory.getInstance(EC, provider)
+                val jcaKey = keyFactory.generatePublic(publicKeySpec) as ECPublicKey
+                val verifiers = ECDSAVerifier(jcaKey)
+                verifiers.jcaContext.provider = provider
+
+                jwsObject.verify(verifiers)
+            } else if (key.getCurve() == Curve.ED25519.value) {
+                val raw = key.getValue()
+                val okp = OctetKeyPair.Builder(
+                    com.nimbusds.jose.jwk.Curve.Ed25519,
+                    Base64URL(raw.base64UrlEncoded)
+                ).build()
+                val verifier = Ed25519Verifier(okp)
+                val provider = BouncyCastleProviderSingleton.getInstance()
+                verifier.jcaContext.provider = provider
+
+                jwsObject.verify(verifier)
+            } else {
+                throw PolluxError.UnsupportedTypeError(key.getCurve())
+            }
         }
         return areVerified.find { it } ?: false
     }
 
-    override suspend fun extractEcPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<ECPublicKey> {
+    override suspend fun extractEcPublicKeyFromVerificationMethod(coreProperty: DIDDocumentCoreProperty): Array<PublicKey> {
         val publicKeys = castor.getPublicKeysFromCoreProperties(arrayOf(coreProperty))
-
-        val ecPublicKeys = publicKeys.map { publicKey ->
-            when (DIDDocument.VerificationMethod.getCurveByType(publicKey.getCurve())) {
-                Curve.SECP256K1 -> {
-                    val kmmEcSecp = KMMECSecp256k1PublicKey.secp256k1FromBytes(publicKey.raw)
-                    val x = BigInteger(1, kmmEcSecp.getCurvePoint().x)
-                    val y = BigInteger(1, kmmEcSecp.getCurvePoint().y)
-                    val ecPoint = ECPoint(x, y)
-                    val curveName = publicKey.getCurve()
-                    val sp = ECNamedCurveTable.getParameterSpec(curveName)
-                    val params: ECParameterSpec =
-                        ECNamedCurveSpec(sp.name, sp.curve, sp.g, sp.n, sp.h)
-
-                    val publicKeySpec = ECPublicKeySpec(ecPoint, params)
-                    val keyFactory = KeyFactory.getInstance(EC, BouncyCastleProvider())
-                    keyFactory.generatePublic(publicKeySpec) as ECPublicKey
-                }
-
-                else -> {
-                    throw Exception("Key type not supported ${publicKey.getCurve()}")
-                }
-            }
-        }
-        return ecPublicKeys.toTypedArray()
+        return publicKeys.toTypedArray()
     }
 
     /**
@@ -1319,6 +1336,6 @@ open class PolluxImpl(
                 verificationMethod.id.did == did && verificationMethod.id.fragment == PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.defaultId()
             }
 
-        return verificationMethod?.id?.string()
+        return verificationMethod?.id?.fragment
     }
 }

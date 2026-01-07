@@ -4,6 +4,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import org.didcommx.didcomm.common.Typ
 import org.didcommx.didcomm.utils.isDID
+import org.hyperledger.identus.apollo.Platform
 import org.hyperledger.identus.walletsdk.domain.DIDCOMM_MESSAGING
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Castor
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Mercury
@@ -221,11 +222,19 @@ constructor(
             throw MercuryError.NoValidServiceFoundError()
         }
 
+        var url = service.serviceEndpoint.uri
+        var headers = arrayOf(KeyValue(HttpHeaders.ContentType, Typ.Encrypted.typ))
+
+        if (url.contains("localhost") && Platform.OS.lowercase().contains("android")) {
+            url = url.replace("localhost", "10.0.2.2")
+            headers += KeyValue("Host", "localhost")
+        }
+
         val result = api.request(
             HttpMethod.Post.value,
-            service.serviceEndpoint.uri,
+            url,
             emptyArray(),
-            arrayOf(KeyValue(HttpHeaders.ContentType, Typ.Encrypted.typ)),
+            headers,
             message
         )
 
@@ -259,11 +268,19 @@ constructor(
             throw MercuryError.NoValidServiceFoundError()
         }
 
+        var url = uri
+        var headers = arrayOf(KeyValue(HttpHeaders.ContentType, Typ.Encrypted.typ))
+
+        if (url.contains("localhost") && Platform.OS.lowercase().contains("android")) {
+            url = url.replace("localhost", "10.0.2.2")
+            headers += KeyValue("Host", "localhost")
+        }
+
         val result = api.request(
             HttpMethod.Post.value,
-            uri,
+            url,
             emptyArray(),
-            arrayOf(KeyValue(HttpHeaders.ContentType, Typ.Encrypted.typ)),
+            headers,
             message
         )
         if (result.status >= 400) {
