@@ -60,6 +60,9 @@ jobs:
       - name: Runner
         run: echo ${{ runner.os }}
 
+      - name: "Test Kotlin code is properly formatted"
+        run: ./gradlew ktlintCheck
+
       - name: Build for JS, Android, JVM
         run: ./gradlew build allTests koverXmlReportRelease koverHtmlReportRelease --stacktrace
 

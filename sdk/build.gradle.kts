@@ -1,103 +1,21 @@
 import com.android.build.gradle.tasks.PackageAndroidArtifact
 import com.android.build.gradle.tasks.SourceJarTask
-import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URL
 
 val currentModuleName: String = "sdk"
-val os: OperatingSystem = OperatingSystem.current()
-val apolloVersion = project.property("apollo_version")
-val didpeerVersion = project.property("didpeer_version")
 
 plugins {
-    id("app.cash.sqldelight") version "2.0.1"
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
-    id("com.android.library")
-    id("org.jetbrains.dokka")
-    id("org.jetbrains.kotlinx.kover") version "0.7.6"
-    id("org.gradle.maven-publish")
+    alias(libs.plugins.sqldelight)
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.kotlinKover)
+    alias(libs.plugins.mavenPublish)
+    alias(libs.plugins.ktlint)
     id("org.gradle.signing")
-}
-
-publishing {
-    publications {
-        withType<MavenPublication> {
-            artifactId = project.name
-            version = project.version.toString()
-            pom {
-                name.set("SDK")
-                description.set("Identus Kotlin Multiplatform (Android/JVM) SDK")
-                url.set("https://hyperledger-identus.github.io/docs/")
-                organization {
-                    name.set("Hyperledger")
-                    url.set("https://hyperledger.org/")
-                }
-                issueManagement {
-                    system.set("Github")
-                    url.set("https://github.com/hyperledger/identus-edge-agent-sdk-kmp")
-                }
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("cristianIOHK")
-                        name.set("Cristian Gonzalez")
-                        email.set("cristian.castro@iohk.io")
-                        organization.set("IOG")
-                        roles.add("developer")
-                        url.set("https://github.com/cristianIOHK")
-                    }
-                    developer {
-                        id.set("hamada147")
-                        name.set("Ahmed Moussa")
-                        email.set("ahmed.moussa@iohk.io")
-                        organization.set("IOG")
-                        roles.add("developer")
-                        url.set("https://github.com/hamada147")
-                    }
-                    developer {
-                        id.set("elribonazo")
-                        name.set("Javier Ribó")
-                        email.set("javier.ribo@iohk.io")
-                        organization.set("IOG")
-                        roles.add("developer")
-                    }
-                    developer {
-                        id.set("amagyar-iohk")
-                        name.set("Allain Magyar")
-                        email.set("allain.magyar@iohk.io")
-                        organization.set("IOG")
-                        roles.add("qc")
-                    }
-                    developer {
-                        id.set("antonbaliasnikov")
-                        name.set("Anton Baliasnikov")
-                        email.set("anton.baliasnikov@iohk.io")
-                        organization.set("IOG")
-                        roles.add("qc")
-                    }
-                    developer {
-                        id.set("goncalo-frade-iohk")
-                        name.set("Gonçalo Frade")
-                        email.set("goncalo.frade@iohk.io")
-                        organization.set("IOG")
-                        roles.add("developer")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://hyperledger-identus/sdk-kmp.git")
-                    developerConnection.set("scm:git:ssh://hyperledger-identus/sdk-kmp.git")
-                    url.set("https://github.com/hyperledger-identus/sdk-kmp")
-                }
-            }
-        }
-    }
 }
 
 if (System.getenv().containsKey("OSSRH_GPG_SECRET_KEY")) {
@@ -186,81 +104,81 @@ kotlin {
             kotlin.srcDir("${project(":protosLib").layout.buildDirectory.asFile.get()}/generated/source/proto/main/kotlin")
             resources.srcDir("${project(":protosLib").projectDir}/src/main")
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.serialization.json)
 
-                implementation("io.ktor:ktor-client-core:2.3.11")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.11")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
-                implementation("io.ktor:ktor-client-logging:2.3.11")
-                implementation("io.ktor:ktor-websockets:2.3.11")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.logging)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.ktor.websockets)
 
-                implementation("io.iohk.atala.prism.didcomm:didpeer:$didpeerVersion")
+                implementation(libs.dependencies.didpeer)
+                implementation(libs.dependencies.apollo)
 
-                implementation("org.hyperledger.identus.apollo:apollo:$apolloVersion")
+                implementation(libs.dependencies.kotlincrypto.hash.sha)
 
-                implementation("org.kotlincrypto.hash:sha2:0.4.0")
+                implementation(libs.pbandk.runtime)
 
-                implementation("pro.streem.pbandk:pbandk-runtime:0.14.2")
-
-                implementation("org.didcommx:didcomm:0.3.2") {
+                implementation("${libs.dependencies.didcomm.get()}") {
                     exclude("com.google.protobuf")
                 }
 
-                implementation("com.google.protobuf:protoc:3.12.0") {
+//                implementation(libs.dependencies)
+                implementation("${libs.dependencies.protoc.get()}") {
                     exclude("com.google.protobuf")
                 }
 
-                implementation("app.cash.sqldelight:coroutines-extensions:2.0.1")
+                implementation(libs.pbandk.runtime)
+                implementation(libs.sqldelight.couroutines.extensions)
 
-                api("org.lighthousegames:logging:1.1.2")
+                api(libs.lighthouse.logging)
 
-                implementation("org.hyperledger:anoncreds_uniffi:0.2.0-wrapper.1")
-                implementation("com.ionspin.kotlin:bignum:0.3.9")
-                implementation("org.bouncycastle:bcprov-jdk15on:1.68")
-                implementation("eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt:0.4.0") {
+                implementation(libs.dependencies.anoncreds)
+                implementation(libs.dependencies.ionspin.bignum)
+                implementation(libs.dependencies.bouncycastle)
+                implementation("${libs.dependencies.eudi.sdjwt.get()}") {
                     exclude(group = "com.nimbusds", module = "nimbus-jose-jwt")
                 }
                 implementation(kotlin("reflect"))
 
-                implementation("com.apicatalog:titanium-json-ld-jre8:1.4.0")
-                implementation("org.glassfish:jakarta.json:2.0.1")
-                implementation("io.setl:rdf-urdna:1.3")
-
-                implementation("app.cash.sqldelight:sqlite-driver:2.0.1")
+                implementation(libs.dependencies.json.ld)
+                implementation(libs.dependencies.json)
+                implementation(libs.dependencies.setl.rdf.urdna)
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-                implementation("io.ktor:ktor-client-mock:2.3.11")
-                implementation("org.mockito:mockito-core:4.4.0")
-                implementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.ktor.client.mock)
+                implementation(libs.mockito.core)
+                implementation(libs.mockito.kotlin)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-okhttp:2.3.11")
-                implementation("io.ktor:ktor-client-java:2.3.11")
-                implementation("app.cash.sqldelight:sqlite-driver:2.0.1")
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.ktor.client.java)
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
         val jvmTest by getting
         val androidMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-                implementation("io.ktor:ktor-client-okhttp:2.3.11")
-                implementation("io.ktor:ktor-client-android:2.3.11")
-                implementation("app.cash.sqldelight:android-driver:2.0.1")
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.ktor.client.android)
+                implementation(libs.sqldelight.android.driver)
             }
         }
         val androidInstrumentedTest by getting {
             dependencies {
                 dependsOn(commonTest)
-                implementation("androidx.test.espresso:espresso-core:3.5.1")
-                implementation("androidx.test.ext:junit:1.1.5")
+                implementation(libs.androidx.test.espresso)
+                implementation(libs.androidx.test.junit)
             }
         }
         /*
@@ -414,5 +332,84 @@ afterEvaluate {
     }
     tasks.named("sourcesJar") {
         dependsOn(buildProtoLibsGen)
+    }
+}
+
+mavenPublishing {
+    val shouldAutoRelease = project.findProperty("autoRelease")?.toString()?.toBoolean() ?: false
+    val artifactId = project.name
+    val version = project.version.toString()
+    publishToMavenCentral(automaticRelease = shouldAutoRelease)
+    signAllPublications()
+    coordinates(group.toString(), artifactId, version.toString())
+    pom {
+        name.set("SDK")
+        description.set("Identus Kotlin Multiplatform (Android/JVM) SDK")
+        url.set("https://hyperledger-identus.github.io/docs/")
+        organization {
+            name.set("Hyperledger")
+            url.set("https://hyperledger.org/")
+        }
+        issueManagement {
+            system.set("Github")
+            url.set("https://github.com/hyperledger/identus-edge-agent-sdk-kmp")
+        }
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+            }
+        }
+        developers {
+            developer {
+                id.set("cristianIOHK")
+                name.set("Cristian Gonzalez")
+                email.set("cristian.castro@iohk.io")
+                organization.set("IOG")
+                roles.add("developer")
+                url.set("https://github.com/cristianIOHK")
+            }
+            developer {
+                id.set("hamada147")
+                name.set("Ahmed Moussa")
+                email.set("ahmed.moussa@iohk.io")
+                organization.set("IOG")
+                roles.add("developer")
+                url.set("https://github.com/hamada147")
+            }
+            developer {
+                id.set("elribonazo")
+                name.set("Javier Ribó")
+                email.set("javier.ribo@iohk.io")
+                organization.set("IOG")
+                roles.add("developer")
+            }
+            developer {
+                id.set("amagyar-iohk")
+                name.set("Allain Magyar")
+                email.set("allain.magyar@iohk.io")
+                organization.set("IOG")
+                roles.add("qc")
+            }
+            developer {
+                id.set("antonbaliasnikov")
+                name.set("Anton Baliasnikov")
+                email.set("anton.baliasnikov@iohk.io")
+                organization.set("IOG")
+                roles.add("qc")
+            }
+            developer {
+                id.set("goncalo-frade-iohk")
+                name.set("Gonçalo Frade")
+                email.set("goncalo.frade@iohk.io")
+                organization.set("IOG")
+                roles.add("developer")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://hyperledger-identus/sdk-kmp.git")
+            developerConnection.set("scm:git:ssh://hyperledger-identus/sdk-kmp.git")
+            url.set("https://github.com/hyperledger-identus/sdk-kmp")
+        }
     }
 }

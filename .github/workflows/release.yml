@@ -3,19 +3,13 @@ name: Release SDK
 
 env:
   JAVA_VERSION: 17
-  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-  GITHUB_ACTOR: "hyperledger-bot"
-  GITHUB_ACTOR_EMAIL: "hyperledger-bot@hyperledger.org"
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-  OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-  OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-  OSSRH_GPG_SECRET_KEY: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-  OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.2.3)'
+        required: true
 
 permissions:
   contents: write
@@ -27,8 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.IDENTUS_CI }}
           fetch-depth: 0
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.IDENTUS_CI }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -44,9 +39,25 @@ jobs:
           server-username: ${{ secrets.OSSRH_USERNAME }}
           server-password: ${{ secrets.OSSRH_PASSWORD }}
 
+      - name: Update gradle.properties with new version
+        run: |
+          sed -i '' 's/^version = *.*.*/version = ${{ github.event.inputs.version }}/' gradle.properties
 
-      - uses: crazy-max/ghaction-import-gpg@v5
-        id: import_gpg
+      - name: Build Kotlin Multiplatform Maven Artifacts
+        run: ./gradlew publishToMavenLocal --no-configuration-cache
+
+      - name: Publish JVM & Android to Maven Central
+        if: ${{ inputs.release_maven }}
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_autoRelease: true
+        run: ./gradlew publishToMavenCentral --no-configuration-cache
+
+      - uses: crazy-max/ghaction-import-gpg@v6
+        id: import-gpg
         with:
           gpg_private_key: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
           passphrase: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
@@ -55,18 +66,21 @@ jobs:
           git_config_global: true
           git_tag_gpgsign: false
 
-      - name: "Release"
+      - name: Commit updated files and tag the release
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_author: "${{ steps.import-gpg.outputs.name }} <${{ steps.import-gpg.outputs.email }}>"
+          commit_user_name: ${{ steps.import-gpg.outputs.name }}
+          commit_user_email: ${{ steps.import-gpg.outputs.email }}
+          commit_options: '-s -S'
+          commit_message: |
+            chore(release): v${{ github.event.inputs.version }}
+          tagging_message: v${{ github.event.inputs.version }}
+          file_pattern: gradle.properties
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
         env:
-          GITHUB_TOKEN: ${{ secrets.IDENTUS_CI }}
-          GITHUB_ACTOR: ${{ steps.import_gpg.outputs.name }}
-          GIT_AUTHOR_EMAIL: ${{ steps.import_gpg.outputs.email }}
-          GIT_COMMITTER_EMAIL: ${{ steps.import_gpg.outputs.email }}
-          GIT_AUTHOR_NAME: ${{ steps.import_gpg.outputs.name }}
-          GIT_COMMITTER_NAME: ${{ steps.import_gpg.outputs.name }}
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          OSSRH_GPG_SECRET_KEY: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
-          OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
-        run: |
-          npm install
-          npx semantic-release
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,8 @@ val os: OperatingSystem = OperatingSystem.current()
 
 plugins {
     `java-library`
-    id("com.google.protobuf")
+    alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.protobuf)
 }
 
 // Mock configuration which derives compile only.
@@ -18,7 +19,8 @@ val jarPathConf: Configuration by configurations.creating {
 
 dependencies {
     // This is needed for includes, ref: https://github.com/google/protobuf-gradle-plugin/issues/41#issuecomment-143884188
-    compileOnly("com.google.protobuf:protobuf-java:3.14.0")
+    implementation(libs.pbandk.runtime)
+    implementation(libs.pbandk.runtime)
 }
 
 sourceSets {

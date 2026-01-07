@@ -1,33 +1,36 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        mavenCentral()
         google()
-        maven("https://plugins.gradle.org/m2/")
+        mavenCentral()
         maven("https://jitpack.io")
     }
 }
 
-buildscript {
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenLocal()
-        gradlePluginPortal()
-        mavenCentral()
         google()
-        maven("https://plugins.gradle.org/m2/")
-        // Needed for Kotlin coroutines that support new memory management mode
+        mavenCentral()
+        maven("https://jitpack.io")
+
         maven {
             url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
         }
-        maven("https://jitpack.io")
-    }
 
-    dependencies {
-        classpath("io.arrow-kt:arrow-ank-gradle:0.11.0")
+        maven {
+            url = uri("https://maven.pkg.github.com/LF-Decentralized-Trust-labs/aries-uniffi-wrappers")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
 
-rootProject.name = "sdk-kmp"
+rootProject.name = "sdk-kmp" // we can rename later if you want
+
 include(":protosLib")
 include(":sdk")
 include(":sampleapp")
