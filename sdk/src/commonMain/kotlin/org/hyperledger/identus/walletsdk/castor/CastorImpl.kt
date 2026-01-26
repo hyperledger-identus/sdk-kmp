@@ -19,6 +19,7 @@ import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocumentCoreProperty
 import org.hyperledger.identus.walletsdk.domain.models.DIDResolver
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import org.hyperledger.identus.walletsdk.logger.LogComponent
@@ -63,6 +64,25 @@ constructor(
      * Creates a DID for a prism (a device or server that acts as a DID owner and controller) using a
      * given master public key and list of services.
      *
+     * @param keys The list of keys with purposes
+     * @param services The list of services offered by the prism
+     * @return [DID]
+     */
+    override fun createPrismDID(
+        keys: List<Pair<KeyPurpose, PublicKey>>,
+        services: Array<DIDDocument.Service>?
+    ): DID {
+        return CastorShared.createPrismDID(
+            apollo = apollo,
+            keys = keys,
+            services = services
+        )
+    }
+
+    /**
+     * Creates a DID for a prism (a device or server that acts as a DID owner and controller) using a
+     * given master public key and list of services.
+     *
      * @param masterPublicKey The master public key of the prism
      * @param services The list of services offered by the prism
      * @return [DID]
@@ -73,7 +93,7 @@ constructor(
     ): DID {
         return CastorShared.createPrismDID(
             apollo = apollo,
-            masterPublicKey = masterPublicKey,
+            keys = listOf(Pair(KeyPurpose.MASTER, masterPublicKey)),
             services = services
         )
     }

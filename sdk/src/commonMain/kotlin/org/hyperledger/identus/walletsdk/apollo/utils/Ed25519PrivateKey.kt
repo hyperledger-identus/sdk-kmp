@@ -129,7 +129,8 @@ class Ed25519PrivateKey(nativeValue: ByteArray) : PrivateKey(), SignableKey, Sto
 
     override fun jca(): java.security.PrivateKey {
         val privateKeyParams = Ed25519PrivateKeyParameters(raw, 0)
-        val pkcs8Encoded = privateKeyParams.encoded
+        val privateKeyInfo = org.bouncycastle.crypto.util.PrivateKeyInfoFactory.createPrivateKeyInfo(privateKeyParams)
+        val pkcs8Encoded = privateKeyInfo.encoded
         val keyFactory = KeyFactory.getInstance("Ed25519", BouncyCastleProvider())
         return keyFactory.generatePrivate(PKCS8EncodedKeySpec(pkcs8Encoded))
     }

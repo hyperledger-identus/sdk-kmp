@@ -43,7 +43,10 @@ data class SDJWTCredential(
 
     override val claims: Array<Claim>
         get() {
-            return sdjwt.jwt.second.map {
+            return sdjwt.jwt.second.mapNotNull {
+                if (it.key == "_sd" || it.key == "_sd_alg") {
+                    return@mapNotNull null
+                }
                 Claim(key = it.key, value = ClaimType.StringValue(it.value.toString()))
             }?.toTypedArray()
                 ?: emptyArray<Claim>()
@@ -74,9 +77,20 @@ data class SDJWTCredential(
                 else -> {}
             }
         }
+        if (disclosingClaims == null || disclosingClaims.isEmpty()) {
+            disclosingClaims = sdjwt.disclosures.map { it.claim().first }
+        }
 
         val inluded = disclosingClaims
-            ?.mapNotNull { JsonPointer.parse(it) }
+            ?.mapNotNull {
+                val finalClaim: String
+                if (!it.startsWith("/")) {
+                    finalClaim = "/$it"
+                } else {
+                    finalClaim = it
+                }
+                JsonPointer.parse(finalClaim)
+            }
             ?.toSet()
         val presentation = sdjwt.present(inluded!!)
         return presentation!!.serialize { (jwt, _) -> jwt }
@@ -93,7 +107,7 @@ data class SDJWTCredential(
             override val id: String
                 get() = c.id
             override val recoveryId: String
-                get() = "jwt+credential"
+                get() = "sd-jwt+credential"
             override val credentialData: ByteArray
                 get() = c.id.toByteArray()
 

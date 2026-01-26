@@ -4,6 +4,7 @@ import org.hyperledger.identus.walletsdk.domain.buildingblocks.Castor
 import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocumentCoreProperty
+import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyPair
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import kotlin.jvm.Throws
@@ -22,6 +23,13 @@ class CastorMock : Castor {
     @Throws(Exception::class)
     override fun parseDID(did: String): DID {
         return parseDIDReturn ?: throw Exception("parseDID() not implemented in mock")
+    }
+
+    override fun createPrismDID(
+        keys: List<Pair<KeyPurpose, PublicKey>>,
+        services: Array<DIDDocument.Service>?
+    ): DID {
+        TODO("Not yet implemented")
     }
 
     @Throws(Exception::class)
