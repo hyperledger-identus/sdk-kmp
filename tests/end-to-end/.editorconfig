@@ -1,0 +1,13 @@
+root = true
+
+[*.{kt,kts}]
+ktlint_code_style = intellij_idea
+ktlint_experimental = disabled
+ktlint_standard_no_semi = disabled
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+ktlint_standard_no-empty-file = disabled
+ktlint_standard_backing-property-naming = disabled
+ij_kotlin_packages_to_use_import_on_demand = unset
+ij_kotlin_name_count_to_use_star_import_for_members = 99
+ij_kotlin_name_count_to_use_star_import = 99

@@ -3,254 +3,302 @@ package org.hyperledger.identus.walletsdk.steps
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
-import kotlinx.coroutines.flow.first
 import net.serenitybdd.screenplay.Actor
-import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assertions.assertThat
-import org.hyperledger.identus.walletsdk.abilities.UseWalletSdk
-import org.hyperledger.identus.walletsdk.domain.models.AnoncredsInputFieldFilter
 import org.hyperledger.identus.walletsdk.domain.models.AnoncredsPresentationClaims
 import org.hyperledger.identus.walletsdk.domain.models.CredentialType
 import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.InputFieldFilter
 import org.hyperledger.identus.walletsdk.domain.models.JWTPresentationClaims
-import org.hyperledger.identus.walletsdk.domain.models.NonRevoked
-import org.hyperledger.identus.walletsdk.domain.models.PresentationClaims
 import org.hyperledger.identus.walletsdk.domain.models.RequestedAttributes
 import org.hyperledger.identus.walletsdk.workflow.CloudAgentWorkflow
 import org.hyperledger.identus.walletsdk.workflow.EdgeAgentWorkflow
-import javax.inject.Inject
 
 class EdgeAgentSteps {
 
-    @Inject
-    private lateinit var edgeAgentWorkflow: EdgeAgentWorkflow
+    @Given("{actor} has '{int}' jwt credentials issued by {actor}")
+    fun edgeAgentHasJwtCredentialsIssuedByCloudAgent(edgeAgent: Actor, numberOfIssuedCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfIssuedCredentials) {
+            CloudAgentWorkflow.offerJwtCredential(cloudAgent)
+            EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            recordIdList.add(recordId)
+            CloudAgentWorkflow.verifyCredentialState(cloudAgent, recordId, "CredentialSent")
+            EdgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, 1)
+            EdgeAgentWorkflow.processSpecificIssuedCred(edgeAgent, recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+    }
 
-    @Inject
-    private lateinit var cloudAgentWorkflow: CloudAgentWorkflow
+    @Given("{actor} has '{int}' sd+jwt credentials issued by {actor}")
+    fun edgeAgentHasSdJwtCredentialsIssuedByCloudAgent(edgeAgent: Actor, numberOfIssuedCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfIssuedCredentials) {
+            CloudAgentWorkflow.offerSDJWTCredential(cloudAgent)
+            EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            recordIdList.add(recordId)
+            CloudAgentWorkflow.verifyCredentialState(cloudAgent, recordId, "CredentialSent")
+            EdgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, 1)
+            EdgeAgentWorkflow.processSpecificIssuedCred(edgeAgent, recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+    }
+
+    @Given("{actor} has '{int}' anonymous credentials issued by {actor}")
+    fun edgeAgentHasAnonymousCredentialsIssuedByCloudAgent(edgeAgent: Actor, numberOfIssuedCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfIssuedCredentials) {
+            CloudAgentWorkflow.offerAnonymousCredential(cloudAgent)
+            EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            recordIdList.add(recordId)
+            CloudAgentWorkflow.verifyCredentialState(cloudAgent, recordId, "CredentialSent")
+            EdgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, 1)
+            EdgeAgentWorkflow.processSpecificIssuedCred(edgeAgent, recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+    }
+
+    @Given("{actor} has '{int}' connectionless jwt credentials issued by {actor}")
+    fun edgeAgentHasConnectionlessJwtCredentialsIssuedByCloudAgent(edgeAgent: Actor, numberOfIssuedCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfIssuedCredentials) {
+            CloudAgentWorkflow.createJwtConnectionlessCredentialOfferInvitation(cloudAgent)
+            CloudAgentWorkflow.shareInvitation(cloudAgent, edgeAgent)
+            EdgeAgentWorkflow.connect(edgeAgent)
+
+            recordIdList.add("connectionless")
+
+            EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+            EdgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, 1)
+            EdgeAgentWorkflow.processSpecificIssuedCred(edgeAgent, "connectionless")
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+    }
 
     @Given("{actor} has created a backup")
-    fun `Edge Agent has created a backup`(edgeAgent: Actor) {
-        edgeAgentWorkflow.createBackup(edgeAgent)
+    fun edgeAgentHasCreatedBackup(edgeAgent: Actor) {
+        EdgeAgentWorkflow.createBackup(edgeAgent)
+    }
+
+    @Given("{actor} creates '{}' peer DIDs")
+    fun edgeAgentCreatesPeerDids(edgeAgent: Actor, numberOfDids: Int) {
+        EdgeAgentWorkflow.createPeerDids(edgeAgent, numberOfDids)
+    }
+
+    @Given("{actor} creates '{}' prism DIDs")
+    fun edgeAgentCreatesPrismDids(edgeAgent: Actor, numberOfDids: Int) {
+        EdgeAgentWorkflow.createPrismDids(edgeAgent, numberOfDids)
+    }
+
+    @When("{actor} accepts {int} sd+jwt credential offer sequentially from {actor}")
+    fun edgeAgentAcceptsSdJwtCredentialOffersSequentially(edgeAgent: Actor, numberOfCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfCredentials) {
+            CloudAgentWorkflow.offerSDJWTCredential(cloudAgent)
+            EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            CloudAgentWorkflow.verifyCredentialState(cloudAgent, recordId, "CredentialSent")
+            recordIdList.add(recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+    }
+
+    @When("{actor} accepts {int} jwt credential offer sequentially from {actor}")
+    fun edgeAgentAcceptsJwtCredentialOffersSequentially(edgeAgent: Actor, numberOfCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfCredentials) {
+            CloudAgentWorkflow.offerJwtCredential(cloudAgent)
+            EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            CloudAgentWorkflow.verifyCredentialState(cloudAgent, recordId, "CredentialSent")
+            recordIdList.add(recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+    }
+
+    @When("{actor} accepts {int} jwt credentials offer at once from {actor}")
+    fun edgeAgentAcceptsJwtCredentialsOfferAtOnce(edgeAgent: Actor, numberOfCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfCredentials) {
+            CloudAgentWorkflow.offerJwtCredential(cloudAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            recordIdList.add(recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+
+        EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, numberOfCredentials)
+
+        repeat(numberOfCredentials) {
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+        }
+    }
+
+    @When("{actor} accepts {int} sd+jwt credentials offer at once from {actor}")
+    fun edgeAgentAcceptsSdJwtCredentialsOfferAtOnce(edgeAgent: Actor, numberOfCredentials: Int, cloudAgent: Actor) {
+        val recordIdList = mutableListOf<String>()
+        repeat(numberOfCredentials) {
+            CloudAgentWorkflow.offerSDJWTCredential(cloudAgent)
+            val recordId = cloudAgent.recall<String>("recordId")
+            recordIdList.add(recordId)
+        }
+        cloudAgent.remember("recordIdList", recordIdList)
+
+        EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, numberOfCredentials)
+
+        repeat(numberOfCredentials) {
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
+        }
     }
 
     @When("{actor} connects through the invite")
-    fun `Edge Agent connects through the invite`(edgeAgent: Actor) {
-        edgeAgentWorkflow.connect(edgeAgent)
+    fun edgeAgentConnectsThroughInvite(edgeAgent: Actor) {
+        EdgeAgentWorkflow.connect(edgeAgent)
     }
 
-    @When("{actor} creates '{}' peer DIDs")
-    fun `Edge Agent creates Peer DIDs`(edgeAgent: Actor, numberOfDids: Int) {
-        edgeAgentWorkflow.createPeerDids(edgeAgent, numberOfDids)
-    }
-
-    @When("{actor} creates '{}' prism DIDs")
-    fun `Edge Agent creates Prism DIDs`(edgeAgent: Actor, numberOfDids: Int) {
-        edgeAgentWorkflow.createPrismDids(edgeAgent, numberOfDids)
-    }
-
-    @When("{actor} has '{}' jwt credentials issued by {actor}")
-    fun `Edge Agent has {} jwt issued credential`(edgeAgent: Actor, numberOfCredentialsIssued: Int, cloudAgent: Actor) {
-        val recordIdList = mutableListOf<String>()
-        repeat(numberOfCredentialsIssued) {
-            cloudAgentWorkflow.offerJwtCredential(cloudAgent)
-            edgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
-            edgeAgentWorkflow.acceptCredential(edgeAgent)
-            val recordId = cloudAgent.recall<String>("recordId")
-            recordIdList.add(recordId)
-            cloudAgentWorkflow.verifyCredentialState(cloudAgent, recordId, "CredentialSent")
-            edgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, 1)
-            edgeAgentWorkflow.processSpecificIssuedCred(edgeAgent, recordId)
+    @When("{actor} accepts the credentials offer from {actor}")
+    fun edgeAgentAcceptsCredentialsOfferFromCloudAgent(edgeAgent: Actor, cloudAgent: Actor) {
+        val recordIdList = cloudAgent.recall<List<String>>("recordIdList")
+        repeat(recordIdList.size) {
+            EdgeAgentWorkflow.acceptCredential(edgeAgent)
         }
-        cloudAgent.remember("recordIdList", recordIdList)
-    }
-
-    @When("{actor} has '{}' anonymous credentials issued by {actor}")
-    fun `Edge Agent has {} anonymous issued credential`(
-        edgeAgent: Actor,
-        numberOfCredentialsIssued: Int,
-        cloudAgent: Actor
-    ) {
-        repeat(numberOfCredentialsIssued) {
-            cloudAgentWorkflow.offerAnonymousCredential(cloudAgent)
-            edgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
-            edgeAgentWorkflow.acceptCredential(edgeAgent)
-            cloudAgentWorkflow.verifyCredentialState(cloudAgent, cloudAgent.recall("recordId"), "CredentialSent")
-            edgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, 1)
-            edgeAgentWorkflow.processIssuedCredential(edgeAgent, 1)
-        }
-    }
-
-    @When("{actor} accepts {} jwt credential offers sequentially from {actor}")
-    fun `Edge Agent accepts multiple credential offers sequentially from Cloud Agent`(
-        edgeAgent: Actor,
-        numberOfCredentials: Int,
-        cloudAgent: Actor
-    ) {
-        val recordIdList = mutableListOf<String>()
-        repeat(numberOfCredentials) {
-            cloudAgentWorkflow.offerJwtCredential(cloudAgent)
-            edgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
-            edgeAgentWorkflow.acceptCredential(edgeAgent)
-            cloudAgentWorkflow.verifyCredentialState(cloudAgent, cloudAgent.recall("recordId"), "CredentialSent")
-            recordIdList.add(cloudAgent.recall("recordId"))
-        }
-        cloudAgent.remember("recordIdList", recordIdList)
-    }
-
-    @When("{actor} accepts {} jwt credential offers at once from {actor}")
-    fun `Edge Agent accepts multiple jwt credential offers at once from Cloud Agent`(
-        edgeAgent: Actor,
-        numberOfCredentials: Int,
-        cloudAgent: Actor
-    ) {
-        val recordIdList = mutableListOf<String>()
-
-        // offer multiple credentials
-        repeat(numberOfCredentials) {
-            cloudAgentWorkflow.offerJwtCredential(cloudAgent)
-            recordIdList.add(cloudAgent.recall("recordId"))
-        }
-        cloudAgent.remember("recordIdList", recordIdList)
-
-        // wait to receive
-        edgeAgentWorkflow.waitForCredentialOffer(edgeAgent, numberOfCredentials)
-
-        // accept all
-        repeat(numberOfCredentials) {
-            edgeAgentWorkflow.acceptCredential(edgeAgent)
-        }
-    }
-
-    @When("{actor} accepts the credential")
-    fun `Edge Agent accepts the credential`(edgeAgent: Actor) {
-        edgeAgentWorkflow.acceptCredential(edgeAgent)
     }
 
     @When("{actor} sends the present-proof")
-    fun `Edge Agent sends the present-proof`(edgeAgent: Actor) {
-        edgeAgentWorkflow.waitForProofRequest(edgeAgent)
-        edgeAgentWorkflow.presentProof(edgeAgent)
+    fun edgeAgentSendsPresentProof(edgeAgent: Actor) {
+        EdgeAgentWorkflow.waitForProofRequest(edgeAgent)
+        EdgeAgentWorkflow.presentProof(edgeAgent)
     }
 
-    @When("{actor} request {actor} to verify the JWT credential")
-    fun `Verifier requests Holder to verify the JWT Credential`(verifierEdgeAgent: Actor, holderEdgeAgent: Actor) {
-        edgeAgentWorkflow.createPeerDids(holderEdgeAgent, 1)
-        val did = holderEdgeAgent.recall<DID>("did")
-        val claims = JWTPresentationClaims(
-            claims = mapOf(
-                "automation-required" to InputFieldFilter(type = "string", pattern = "required value")
-            )
-        )
-        edgeAgentWorkflow.initiatePresentationRequest(CredentialType.JWT, verifierEdgeAgent, did, claims)
-    }
-
-    @When("{actor} request {actor} to verify the anonymous credential")
-    fun `Verifier requests Holder to verify the anoncred credential`(verifierEdgeAgent: Actor, holderEdgeAgent: Actor) {
-        edgeAgentWorkflow.createPeerDids(holderEdgeAgent, 1)
-        val did = holderEdgeAgent.recall<DID>("did")
-        val claims = AnoncredsPresentationClaims(
-            attributes = mapOf(
-                "name" to RequestedAttributes(
-                    name = "name",
-                    names = setOf("name"),
-                    restrictions = emptyMap(),
-                    null
-                )
-            ),
-            predicates = emptyMap()
-        )
-        edgeAgentWorkflow.initiatePresentationRequest(CredentialType.ANONCREDS_PROOF_REQUEST, verifierEdgeAgent, did, claims)
-    }
-
-    @When("{actor} sends the verification proof")
-    fun `Edge Agent sends the verification proof`(edgeAgent: Actor) {
-        edgeAgentWorkflow.waitForProofRequest(edgeAgent)
-        edgeAgentWorkflow.presentProof(edgeAgent)
-    }
-
-    @Then("{actor} should receive the credential")
-    fun `Edge Agent should receive the credential`(edgeAgent: Actor) {
-        edgeAgentWorkflow.waitForCredentialOffer(edgeAgent, 1)
-    }
-
-    @Then("{actor} should receive the anonymous credential")
-    fun `Edge Agent should receive the anonymous credential`(edgeAgent: Actor) {
-        edgeAgentWorkflow.waitToReceiveAnonymousCredential(edgeAgent, 1)
-    }
-
-    @Then("{actor} wait to receive {} issued credentials")
-    fun `Edge Agent wait to receive issued credentials`(edgeAgent: Actor, expectedNumberOfCredentials: Int) {
-        edgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, expectedNumberOfCredentials)
-    }
-
-    @Then("{actor} process {} issued credentials")
-    fun `Edge Agent process multiple issued credentials`(edgeAgent: Actor, numberOfCredentials: Int) {
-        edgeAgentWorkflow.processIssuedCredential(edgeAgent, numberOfCredentials)
-    }
-
-    @Then("{actor} should have {} credentials")
-    fun `Edge Agent should have expected credentials`(actor: Actor, numberOfCredentials: Int) {
-        actor.attemptsTo(
-            UseWalletSdk.execute {
-                val credentials = it.sdk.getAllCredentials().first()
-                assertThat(credentials.size).isEqualTo(numberOfCredentials)
-            }
-        )
+    @Then("{actor} should receive the credentials offer from {actor}")
+    fun edgeAgentShouldReceiveCredentialsOffer(edgeAgent: Actor, cloudAgent: Actor) {
+        val recordIdList = cloudAgent.recall<List<String>>("recordIdList")
+        EdgeAgentWorkflow.waitForCredentialOffer(edgeAgent, recordIdList.size)
     }
 
     @Then("{actor} waits to receive the revocation notifications from {actor}")
-    fun `Edge Agent waits to receive the revocation notifications from Cloud Agent`(
-        edgeAgent: Actor,
-        cloudAgent: Actor
-    ) {
-        val revokedRecordIdList = cloudAgent.recall<MutableList<String>>("revokedRecordIdList")
-        edgeAgentWorkflow.waitForCredentialRevocationMessage(edgeAgent, revokedRecordIdList.size)
+    fun edgeAgentWaitsToReceiveRevocationNotifications(edgeAgent: Actor, cloudAgent: Actor) {
+        val revokedRecordIdList = cloudAgent.recall<List<String>>("revokedRecordIdList")
+        EdgeAgentWorkflow.waitForCredentialRevocationMessage(edgeAgent, revokedRecordIdList.size)
     }
 
     @Then("{actor} should see the credentials were revoked by {actor}")
-    fun `Edge Agent should see the credentials were revoked by Cloud Agent`(edgeAgent: Actor, cloudAgent: Actor) {
-        val revokedRecordIdList = cloudAgent.recall<MutableList<String>>("revokedRecordIdList")
-        edgeAgentWorkflow.waitUntilCredentialIsRevoked(edgeAgent, revokedRecordIdList)
+    fun edgeAgentShouldSeeCredentialsWereRevoked(edgeAgent: Actor, cloudAgent: Actor) {
+        val revokedRecordIdList = cloudAgent.recall<List<String>>("revokedRecordIdList")
+        EdgeAgentWorkflow.waitUntilCredentialIsRevoked(edgeAgent, revokedRecordIdList)
+    }
+
+    @Then("{actor} process issued credentials from {actor}")
+    fun edgeAgentProcessesIssuedCredentials(edgeAgent: Actor, cloudAgent: Actor) {
+        val recordIdList = cloudAgent.recall<List<String>>("recordIdList")
+        for (recordId in recordIdList) {
+            EdgeAgentWorkflow.processSpecificIssuedCred(edgeAgent, recordId)
+        }
+    }
+
+    @Then("{actor} wait to receive issued credentials from {actor}")
+    fun edgeAgentWaitsToReceiveIssuedCredentials(edgeAgent: Actor, cloudAgent: Actor) {
+        val recordIdList = cloudAgent.recall<List<String>>("recordIdList")
+        EdgeAgentWorkflow.waitToReceiveCredentialIssuance(edgeAgent, recordIdList.size)
     }
 
     @Then("a new SDK can be restored from {actor}")
-    fun `A new SDK can be restored from Edge Agent`(edgeAgent: Actor) {
-        edgeAgentWorkflow.createANewWalletFromBackup(edgeAgent)
+    fun newSdkCanBeRestoredFromEdgeAgent(edgeAgent: Actor) {
+        EdgeAgentWorkflow.createANewWalletFromBackup(edgeAgent)
     }
 
     @Then("a new SDK cannot be restored from {actor} with wrong seed")
-    fun `A new SDK cannot be restored from Edge Agent with wrong seed`(edgeAgent: Actor) {
-        edgeAgentWorkflow.createNewWalletFromBackupWithWrongSeed(edgeAgent)
+    fun newSdkCannotBeRestoredWithWrongSeed(edgeAgent: Actor) {
+        EdgeAgentWorkflow.createNewWalletFromBackupWithWrongSeed(edgeAgent)
     }
 
     @Then("a new {actor} is restored from {actor}")
-    fun `A new Agent is restored from Edge Agent`(newAgent: Actor, originalAgent: Actor) {
-        edgeAgentWorkflow.backupAndRestoreToNewAgent(newAgent, originalAgent)
+    fun newAgentIsRestoredFromEdgeAgent(newAgent: Actor, edgeAgent: Actor) {
+        EdgeAgentWorkflow.backupAndRestoreToNewAgent(newAgent, edgeAgent)
     }
 
     @Then("{actor} should have the expected values from {actor}")
-    fun `Restored Agent should have the expected values from Original Edge Agent`(
-        restoredEdgeAgent: Actor,
-        originalEdgeAgent: Actor
-    ) {
-        edgeAgentWorkflow.copyAgentShouldMatchOriginalAgent(restoredEdgeAgent, originalEdgeAgent)
+    fun restoredAgentShouldHaveExpectedValues(copyEdgeAgent: Actor, originalEdgeAgent: Actor) {
+        EdgeAgentWorkflow.copyAgentShouldMatchOriginalAgent(copyEdgeAgent, originalEdgeAgent)
     }
 
     @Then("{actor} is dismissed")
-    fun `Edge Agent is dismissed`(edgeAgent: Actor) {
+    fun edgeAgentIsDismissed(edgeAgent: Actor) {
         edgeAgent.wrapUp()
     }
 
-    @Then("{actor} should see the verification proof is verified")
-    fun `Verifier Edge Agent should see the verification proof is verified`(verifierEdgeAgent: Actor) {
-        edgeAgentWorkflow.waitForPresentationMessage(verifierEdgeAgent)
-        edgeAgentWorkflow.verifyPresentation(verifierEdgeAgent)
+    @Then("{actor} will request {actor} to verify the anonymous credential")
+    fun verifierRequestsHolderToVerifyAnonymousCredential(verifierEdgeAgent: Actor, holderEdgeAgent: Actor) {
+        EdgeAgentWorkflow.createPeerDids(holderEdgeAgent, 1)
+        val holderDID = holderEdgeAgent.recall<DID>("lastPeerDID")
+        val claims = AnoncredsPresentationClaims(
+            attributes = mapOf(
+                "name" to RequestedAttributes(name = "name", names = setOf("name"), restrictions = emptyMap(), null)
+            ),
+            predicates = emptyMap()
+        )
+        EdgeAgentWorkflow.initiatePresentationRequest(CredentialType.ANONCREDS_PROOF_REQUEST, verifierEdgeAgent, holderDID, claims)
     }
 
-    @Then("{actor} should see the verification proof was not verified due revocation")
-    fun `Verifier Edge Agent should see the verification proof was not verified`(verifierEdgeAgent: Actor) {
-        edgeAgentWorkflow.waitForPresentationMessage(verifierEdgeAgent)
-        edgeAgentWorkflow.verifyPresentation(verifierEdgeAgent, expected = false, shouldBeRevoked = true)
+    @Then("{actor} will request {actor} to verify the JWT credential")
+    fun verifierRequestsHolderToVerifyJwtCredential(verifierEdgeAgent: Actor, holderEdgeAgent: Actor) {
+        EdgeAgentWorkflow.createPeerDids(holderEdgeAgent, 1)
+        val holderDID = holderEdgeAgent.recall<DID>("lastPeerDID")
+        val claims = JWTPresentationClaims(
+            claims = mapOf("automation-required" to InputFieldFilter(type = "string", pattern = "required value"))
+        )
+        EdgeAgentWorkflow.initiatePresentationRequest(CredentialType.JWT, verifierEdgeAgent, holderDID, claims)
+    }
+
+    @Then("{actor} will request {actor} to verify the SD+JWT credential")
+    fun verifierRequestsHolderToVerifySdJwtCredential(verifierEdgeAgent: Actor, holderEdgeAgent: Actor) {
+        EdgeAgentWorkflow.createPeerDids(holderEdgeAgent, 1)
+        val holderDID = holderEdgeAgent.recall<DID>("lastPeerDID")
+        val claims = JWTPresentationClaims(
+            claims = mapOf("automation-required" to InputFieldFilter(type = "string", pattern = "required value"))
+        )
+        // Mapping CredentialType.SDJWT if available in SDK, otherwise assume JWT structure handled
+        EdgeAgentWorkflow.initiatePresentationRequest(CredentialType.SDJWT, verifierEdgeAgent, holderDID, claims)
+    }
+
+    @Then("{actor} will request {actor} to verify the SD+JWT credential with non-existing claims")
+    fun verifierRequestsHolderToVerifySdJwtCredentialWithNonExistingClaims(verifierEdgeAgent: Actor, holderEdgeAgent: Actor) {
+        EdgeAgentWorkflow.createPeerDids(holderEdgeAgent, 1)
+        val holderDID = holderEdgeAgent.recall<DID>("lastPeerDID")
+        val claims = JWTPresentationClaims(
+            claims = mapOf("doesNotExist" to InputFieldFilter(type = "string", pattern = "required value"))
+        )
+        EdgeAgentWorkflow.initiatePresentationRequest(CredentialType.SDJWT, verifierEdgeAgent, holderDID, claims)
+    }
+
+    @When("{actor} sends the verification proof")
+    fun edgeAgentSendsVerificationProof(edgeAgent: Actor) {
+        EdgeAgentWorkflow.waitForProofRequest(edgeAgent)
+        EdgeAgentWorkflow.presentVerificationRequest(edgeAgent)
+    }
+
+    @Then("{actor} should receive an exception when trying to use a wrong anoncred credential")
+    fun edgeAgentShouldReceiveExceptionForWrongAnoncred(edgeAgent: Actor) {
+        EdgeAgentWorkflow.waitForProofRequest(edgeAgent)
+        EdgeAgentWorkflow.tryToPresentVerificationRequestWithWrongAnoncred(edgeAgent)
+    }
+
+    @Then("{actor} should see the verification proof is verified")
+    fun verifierEdgeAgentShouldSeeVerificationProofVerified(verifierEdgeAgent: Actor) {
+        EdgeAgentWorkflow.waitForPresentationMessage(verifierEdgeAgent)
+        EdgeAgentWorkflow.verifyPresentation(verifierEdgeAgent, expected = true)
+    }
+
+    @Then("{actor} should see the verification proof is verified false")
+    fun verifierEdgeAgentShouldSeeVerificationProofVerifiedFalse(verifierEdgeAgent: Actor) {
+        EdgeAgentWorkflow.waitForPresentationMessage(verifierEdgeAgent)
+        EdgeAgentWorkflow.verifyPresentation(verifierEdgeAgent, expected = false)
     }
 }

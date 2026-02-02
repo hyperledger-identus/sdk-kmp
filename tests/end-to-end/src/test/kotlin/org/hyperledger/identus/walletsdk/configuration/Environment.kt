@@ -1,7 +1,6 @@
 package org.hyperledger.identus.walletsdk.configuration
 
 import io.iohk.atala.automation.utils.Wait
-import org.hyperledger.identus.walletsdk.utils.Notes
 import io.restassured.RestAssured
 import io.restassured.builder.RequestSpecBuilder
 import io.restassured.response.Response
@@ -11,112 +10,152 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.identus.client.models.CreateManagedDidRequest
 import org.hyperledger.identus.client.models.CreateManagedDidRequestDocumentTemplate
 import org.hyperledger.identus.client.models.CredentialDefinitionInput
-import org.hyperledger.identus.client.models.CredentialDefinitionResponse
 import org.hyperledger.identus.client.models.CredentialSchemaInput
+import org.hyperledger.identus.client.models.Curve
 import org.hyperledger.identus.client.models.ManagedDIDKeyTemplate
 import org.hyperledger.identus.client.models.Purpose
 import org.hyperledger.identus.walletsdk.models.AnoncredSchema
 import org.hyperledger.identus.walletsdk.models.JwtSchema
 import org.hyperledger.identus.walletsdk.models.JwtSchemaProperty
-import java.io.File
-import java.util.*
+import org.hyperledger.identus.walletsdk.utils.Notes
+import java.util.Properties
+import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
 
+data class AgentConfig(
+    var url: String,
+    val apiKey: String
+)
+
+data class MediatorConfig(
+    val url: String
+)
+
+data class JwtSchemaConfig(
+    val guid: String,
+    var url: String = ""
+)
+
+data class CredDefConfig(
+    val guid: String,
+    var id: String = ""
+)
+
+data class DataByDid(
+    var did: String,
+    var jwtSchema: JwtSchemaConfig,
+    var credDefUrl: CredDefConfig
+)
+
 object Environment {
-    lateinit var agentUrl: String
-    lateinit var mediatorOobUrl: String
-    lateinit var publishedDid: String
-    lateinit var jwtSchemaGuid: String
-    lateinit var anoncredDefinitionId: String
+    lateinit var agent: AgentConfig
+    lateinit var mediator: MediatorConfig
+    lateinit var secp256k1: DataByDid
+    lateinit var ed25519: DataByDid
 
     /**
-     * Set up the variables based on the properties config file
+     * Set up the variables based on the properties config file and Environment variables
      */
     fun setup() {
-        // prepare notes
         Notes.prepareNotes()
+        val properties = loadProperties()
+        val agentUrlRaw = properties.getProperty("AGENT_URL") ?: ""
+        agent = AgentConfig(
+            url = if (agentUrlRaw.endsWith("/")) agentUrlRaw.dropLast(1) else agentUrlRaw,
+            apiKey = properties.getProperty("APIKEY") ?: ""
+        )
+        mediator = MediatorConfig(
+            url = properties.getProperty("MEDIATOR_OOB_URL") ?: ""
+        )
+        secp256k1 = DataByDid(
+            did = properties.getProperty("SECP256K1_PUBLISHED_DID") ?: "",
+            jwtSchema = JwtSchemaConfig(guid = properties.getProperty("SECP256K1_JWT_SCHEMA_GUID") ?: ""),
+            credDefUrl = CredDefConfig(guid = properties.getProperty("SECP256K1_ANONCRED_DEFINITION_GUID") ?: "")
+        )
+        ed25519 = DataByDid(
+            did = properties.getProperty("ED25519_PUBLISHED_DID") ?: "",
+            jwtSchema = JwtSchemaConfig(guid = properties.getProperty("ED25519_JWT_SCHEMA_GUID") ?: ""),
+            credDefUrl = CredDefConfig(guid = properties.getProperty("ED25519_ANONCRED_DEFINITION_GUID") ?: "")
+        )
+        configureRestAssured()
+        secp256k1.did = verifyDidSetup(secp256k1.did, Curve.SECP256K1)
+        secp256k1.jwtSchema = verifyJwtSchemaSetupUrl(secp256k1.jwtSchema.guid, secp256k1.did)
+        secp256k1.credDefUrl = verifyAnoncredDefinitionUrl(secp256k1.credDefUrl.guid, secp256k1.did, secp256k1.did)
 
-        // configure environment variables
+        ed25519.did = verifyDidSetup(ed25519.did, Curve.ED25519)
+        ed25519.jwtSchema = verifyJwtSchemaSetupUrl(ed25519.jwtSchema.guid, ed25519.did)
+        ed25519.credDefUrl = verifyAnoncredDefinitionUrl(ed25519.credDefUrl.guid, ed25519.did, ed25519.did)
+
+        Notes.appendMessage("Agent: $agent")
+        Notes.appendMessage("Mediator: $mediator")
+        Notes.appendMessage("Secp256k1: $secp256k1")
+        Notes.appendMessage("Ed25519: $ed25519")
+    }
+
+    private fun loadProperties(): Properties {
         val properties = Properties()
-
         val localProperties = this::class.java.classLoader.getResourceAsStream("local.properties")
         if (localProperties != null) {
             properties.load(localProperties)
         }
-
-        // override default configuration with any env variable
         properties.putAll(System.getenv())
+        return properties
+    }
 
-        mediatorOobUrl = properties.getProperty("MEDIATOR_OOB_URL")
-        agentUrl = properties.getProperty("AGENT_URL")
-
-        // set base uri for rest assured
-        RestAssured.baseURI = agentUrl
-
-        // configure rest assured
-        if (properties.containsKey("APIKEY")) {
+    private fun configureRestAssured() {
+        RestAssured.baseURI = agent.url
+        if (agent.apiKey.isNotEmpty()) {
             val requestSpecification = RequestSpecBuilder()
-                .addHeader("APIKEY", properties.getProperty("APIKEY"))
+                .addHeader("APIKEY", agent.apiKey)
                 .build()
             SerenityRest.setDefaultRequestSpecification(requestSpecification)
         }
-
-        // check if DID and schema exist
-        preparePublishedDid(properties.getProperty("PUBLISHED_DID"))
-        checkJwtSchema(properties.getProperty("JWT_SCHEMA_GUID"))
-        checkAnonCredSchema(properties.getProperty("ANONCRED_DEFINITION_GUID"))
-
-        Notes.appendMessage("Mediator: $mediatorOobUrl")
-        Notes.appendMessage("Agent: $agentUrl")
-        Notes.appendMessage("DID: $publishedDid")
-        Notes.appendMessage("JWT Schema: $jwtSchemaGuid")
-        Notes.appendMessage("Anoncred Definition: $anoncredDefinitionId")
-        Notes.appendMessage("SDK Version: ${getSdkVersion()}")
     }
 
-    private fun getSdkVersion(): String {
-        val file = File("build.gradle.kts")
-        val input = file.readText()
-        val regex = Regex("edge-agent-sdk:(.*)(?=\")")
-        return regex.find(input)!!.groups[1]!!.value
-    }
-
-    /**
-     * Checks if the environment PUBLISHED_DID variable exists in cloud-agent, otherwise it creates a new one.
-     */
-    private fun preparePublishedDid(publishedDid: String?) {
+    private fun verifyDidSetup(initialDid: String, curve: Curve): String {
         try {
-            assertThat(publishedDid).isNotEmpty()
-            RestAssured
-                .given().get("did-registrar/dids/$publishedDid")
-                .then().assertThat().statusCode(200)
-            Environment.publishedDid = publishedDid!!
-            return
+            assertThat(initialDid).isNotEmpty()
+
+            val response = RestAssured.given().get("dids/$initialDid").thenReturn()
+            assertThat(response.statusCode).isEqualTo(200)
+
+            val didDocument = response.body.jsonPath()
+
+            val assertionMethods = didDocument.getList<String>("didDocument.assertionMethod")
+            val authenticationMethods = didDocument.getList<String>("didDocument.authentication")
+
+            val hasAssert1 = assertionMethods.any { it.contains("#assert1") }
+            val hasAuth1 = authenticationMethods.any { it.contains("#auth1") }
+
+            assertThat(hasAssert1).withFailMessage("Expected 'assert1' to be part of provided did").isTrue()
+            assertThat(hasAuth1).withFailMessage("Expected 'auth1' to be part of provided did").isTrue()
+
+            return initialDid
         } catch (e: AssertionError) {
-            Notes.appendMessage("DID [${publishedDid}] not found. Creating a new one.")
+            Notes.appendMessage("DID [$initialDid] not valid or not found. Creating a new one for $curve.")
+        } catch (e: Exception) {
+            Notes.appendMessage("Error checking DID [$initialDid]. Creating a new one for $curve.")
         }
 
-        val publicKey = ManagedDIDKeyTemplate(
-            id = "key-1",
-            purpose = Purpose.ASSERTION_METHOD
-        )
-
-        val documentTemplate = CreateManagedDidRequestDocumentTemplate(
-            publicKeys = listOf(publicKey),
-            services = emptyList()
-        )
-
         val creationData = CreateManagedDidRequest(
-            documentTemplate = documentTemplate
+            documentTemplate = CreateManagedDidRequestDocumentTemplate(
+                publicKeys = listOf(
+                    ManagedDIDKeyTemplate("assert1", Purpose.ASSERTION_METHOD, curve),
+                    ManagedDIDKeyTemplate("auth1", Purpose.AUTHENTICATION, curve)
+                ),
+                services = emptyList()
+            )
         )
 
-        val creationResponse = RestAssured
-            .given().body(creationData).post("/did-registrar/dids")
+        val creationResponse = RestAssured.given()
+            .body(creationData)
+            .post("did-registrar/dids")
             .thenReturn()
+
         val longFormDid = creationResponse.body.jsonPath().getString("longFormDid")
 
-        val publicationResponse = RestAssured
-            .given().post("/did-registrar/dids/$longFormDid/publications")
+        val publicationResponse = RestAssured.given()
+            .post("did-registrar/dids/$longFormDid/publications")
             .thenReturn()
 
         assertThat(publicationResponse.statusCode).isEqualTo(HttpStatus.SC_ACCEPTED)
@@ -125,81 +164,101 @@ object Environment {
         lateinit var response: Response
         Wait.until(60.seconds, 1.seconds) {
             response = RestAssured.given()
-                .get("$agentUrl/did-registrar/dids/${shortFormDid}")
+                .get("did-registrar/dids/$shortFormDid")
                 .thenReturn()
             response.body.jsonPath().getString("status") == "PUBLISHED"
         }
-        Environment.publishedDid = response.body.jsonPath().getString("did")
+
+        return response.body.jsonPath().getString("did")
     }
 
-    /**
-     * Checks if the environment variable exists in cloud-agent, otherwise it creates a new one.
-     */
-    private fun checkJwtSchema(schemaGuid: String?) {
+    private fun verifyJwtSchemaSetupUrl(jwtSchemaGuid: String, did: String): JwtSchemaConfig {
         try {
-            assertThat(schemaGuid).isNotEmpty()
-            RestAssured
-                .given().get("schema-registry/schemas/$schemaGuid")
-                .then().assertThat().statusCode(200)
-            jwtSchemaGuid = schemaGuid!!
-            return
+            assertThat(jwtSchemaGuid).isNotEmpty()
+            val response = RestAssured.given()
+                .get("schema-registry/schemas/$jwtSchemaGuid")
+                .thenReturn()
+
+            assertThat(response.statusCode).isEqualTo(200)
+
+            // Verify properties exist
+            val properties = response.body.jsonPath().getMap<String, Any>("schema.properties")
+            assertThat(properties).containsKey("automation-optional")
+            assertThat(properties).containsKey("automation-required")
+
+            val selfLink = response.body.jsonPath().getString("self")
+            return JwtSchemaConfig(
+                guid = jwtSchemaGuid,
+                url = "${agent.url}$selfLink"
+            )
         } catch (e: AssertionError) {
-            Notes.appendMessage("JWT schema [${schemaGuid}] not found. Creating a new one.")
+            Notes.appendMessage("JWT Schema [$jwtSchemaGuid] not valid or not found. Creating a new one.")
         }
 
-        val schemaName = "automation-jwt-schema-" + UUID.randomUUID()
-
-        val jwtSchema = JwtSchema()
-        jwtSchema.id = "https://example.com/$schemaName"
-        jwtSchema.schema = "https://json-schema.org/draft/2020-12/schema"
-        jwtSchema.description = "Automation schema description"
-        jwtSchema.type = "object"
-
-        jwtSchema.properties["automation-required"] = JwtSchemaProperty("string")
-        jwtSchema.properties["automation-optional"] = JwtSchemaProperty("string")
+        // Create new JWT Schema
+        val schemaName = "automation-schema-" + UUID.randomUUID()
+        val jwtSchema = JwtSchema().apply {
+            id = "https://example.com/automated-credential"
+            schema = "https://json-schema.org/draft/2020-12/schema"
+            description = "automated-credential-schema"
+            type = "object"
+            properties["automation-required"] = JwtSchemaProperty("string")
+            properties["automation-optional"] = JwtSchemaProperty("string")
+            // Assuming the SDK model supports 'required' and 'additionalProperties',
+            // otherwise these might need to be set differently depending on your SDK version
+        }
 
         val credentialSchemaInput = CredentialSchemaInput(
-            author = publishedDid,
+            author = did,
             description = "Some description to automation generated schema",
             name = schemaName,
             tags = listOf("automation"),
             type = "https://w3c-ccg.github.io/vc-json-schemas/schema/2.0/schema.json",
-            version = "0.0.1",
+            version = "1.0.0",
             schema = jwtSchema
         )
 
-        val schemaCreationResponse = RestAssured.given()
+        val schemaResponse = RestAssured.given()
             .body(credentialSchemaInput)
-            .post("/schema-registry/schemas")
+            .post("schema-registry/schemas")
             .thenReturn()
 
-        jwtSchemaGuid = schemaCreationResponse.body.jsonPath().getString("guid")
+        val newGuid = schemaResponse.body.jsonPath().getString("guid")
+        val newSelf = schemaResponse.body.jsonPath().getString("self")
+
+        // Note: Check if 'self' includes leading slash
+        return JwtSchemaConfig(
+            guid = newGuid,
+            url = "${agent.url}$newSelf"
+        )
     }
 
-    private fun checkAnonCredSchema(definitionId: String?) {
+    private fun verifyAnoncredDefinitionUrl(definitionId: String, did: String, schemaDid: String): CredDefConfig {
         try {
             assertThat(definitionId).isNotEmpty()
-            RestAssured
-                .given().get("credential-definition-registry/definitions/${definitionId}")
+            RestAssured.given()
+                .get("credential-definition-registry/definitions/$definitionId")
                 .then().assertThat().statusCode(200)
-
-            anoncredDefinitionId = definitionId!!
-            return
+            return CredDefConfig(
+                guid = definitionId,
+                id = "${agent.url}/credential-definition-registry/definitions/$definitionId/definition"
+            )
         } catch (e: AssertionError) {
-            Notes.appendMessage("Anoncred Definition not found for [${definitionId}]. Creating a new one.")
+            Notes.appendMessage("Anoncred Def [$definitionId] not found. Creating a new one.")
         }
 
+        // 1. Create Schema First
         val schemaName = "automation-anoncred-schema-" + UUID.randomUUID()
-
-        val anoncredSchema = AnoncredSchema()
-        anoncredSchema.name = "Automation Anoncred"
-        anoncredSchema.version = "1.0"
-        anoncredSchema.issuerId = publishedDid
-        anoncredSchema.attrNames = mutableListOf("name", "age", "gender")
+        val anoncredSchema = AnoncredSchema().apply {
+            name = "Automation Anoncred"
+            version = "1.0"
+            issuerId = schemaDid
+            attrNames = mutableListOf("name", "age", "gender")
+        }
 
         val credentialSchemaInput = CredentialSchemaInput(
-            author = publishedDid,
-            description = "Some description to automation generated schema",
+            author = did,
+            description = "Anoncred Schema for Kotlin",
             name = schemaName,
             tags = listOf("automation"),
             type = "AnoncredSchemaV1",
@@ -209,30 +268,35 @@ object Environment {
 
         val schemaCreationResponse = RestAssured.given()
             .body(credentialSchemaInput)
-            .post("/schema-registry/schemas")
+            .post("schema-registry/schemas")
             .thenReturn()
-
-        assertThat(schemaCreationResponse.statusCode).isEqualTo(HttpStatus.SC_CREATED)
 
         val newSchemaGuid = schemaCreationResponse.body.jsonPath().getString("guid")
 
+        // 2. Create Definition
         val definitionName = "automation-anoncred-definition-" + UUID.randomUUID()
         val definition = CredentialDefinitionInput(
             name = definitionName,
             version = "1.0.0",
             tag = "automation-test",
-            author = publishedDid,
-            schemaId = "$agentUrl/schema-registry/schemas/${newSchemaGuid}/schema",
+            author = did,
+            schemaId = "${agent.url}/schema-registry/schemas/$newSchemaGuid/schema",
             signatureType = "CL",
             supportRevocation = false,
-            description = "Test Automation Auto-Generated"
+            description = "Test Automation Auto-Generated Kotlin"
         )
 
-        val credentialDefinition = RestAssured
-            .given().body(definition).post("/credential-definition-registry/definitions")
+        val definitionResponse = RestAssured.given()
+            .body(definition)
+            .post("credential-definition-registry/definitions")
             .then().assertThat().statusCode(201)
-            .extract().`as`(CredentialDefinitionResponse::class.java)
+            .extract().response()
 
-        anoncredDefinitionId = credentialDefinition.guid.toString()
+        val newGuid = definitionResponse.body.jsonPath().getString("guid")
+
+        return CredDefConfig(
+            guid = newGuid,
+            id = "${agent.url}/credential-definition-registry/definitions/$newGuid/definition"
+        )
     }
 }

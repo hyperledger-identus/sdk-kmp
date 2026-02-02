@@ -24,7 +24,7 @@ object Notes {
      * @param message new message line
      */
     fun appendMessage(message: String) {
-        if(System.getenv().containsKey("CI")) {
+        if (System.getenv().containsKey("CI")) {
             logger.info("Adding to notes: $message")
             val file = File("notes")
             file.appendText(message + "\n", Charsets.UTF_8)

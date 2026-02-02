@@ -2,7 +2,7 @@ package org.hyperledger.identus.walletsdk.models
 
 import com.google.gson.annotations.SerializedName
 
-data class JwtSchema (
+data class JwtSchema(
     @SerializedName("\$id")
     var id: String = "",
 
