@@ -181,7 +181,6 @@ kotlin {
         }
         val androidInstrumentedTest by getting {
             dependencies {
-                dependsOn(commonTest)
                 implementation(libs.androidx.test.espresso)
                 implementation(libs.androidx.test.junit)
             }

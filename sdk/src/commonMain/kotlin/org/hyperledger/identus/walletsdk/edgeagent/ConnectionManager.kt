@@ -25,6 +25,9 @@ import org.hyperledger.identus.walletsdk.edgeagent.mediation.MediationHandler
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.ProtocolType
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.issueCredential.IssueCredential
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.revocation.RevocationNotification
+import org.hyperledger.identus.walletsdk.logger.LogComponent
+import org.hyperledger.identus.walletsdk.logger.Logger
+import org.hyperledger.identus.walletsdk.logger.LoggerImpl
 import java.time.Duration
 
 interface ConnectionManager : ConnectionsManager, DIDCommConnection {
@@ -66,7 +69,8 @@ class ConnectionManagerImpl(
     private var pairings: MutableList<DIDPair>,
     private val pollux: Pollux,
     private val experimentLiveModeOptIn: Boolean = false,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
+    private val logger: Logger = LoggerImpl(LogComponent.EDGE_AGENT)
 ) : ConnectionManager, ConnectionsManager, DIDCommConnection {
 
     var fetchingMessagesJob: Job? = null
@@ -149,7 +153,7 @@ class ConnectionManagerImpl(
      */
     override suspend fun registerMediator(host: DID) {
         mediationHandler.achieveMediation(host).collect {
-            println("Achieve mediation")
+            logger.info(message = "Mediation achieved")
         }
     }
 

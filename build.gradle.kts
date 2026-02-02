@@ -24,10 +24,8 @@ buildscript {
     }
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
-    }
+kotlin {
+    jvmToolchain(21)
 }
 
 allprojects {

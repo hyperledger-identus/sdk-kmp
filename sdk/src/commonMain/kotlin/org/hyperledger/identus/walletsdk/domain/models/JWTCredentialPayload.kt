@@ -12,10 +12,12 @@ import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.encodeStructure
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -51,9 +53,19 @@ object MapStringAnyToStringSerializer : KSerializer<Map<String, String>> {
         return jsonObject.mapValues { (_, value) ->
             when (value) {
                 is JsonPrimitive -> value.content
-                is JsonElement -> value.jsonPrimitive.content
                 else -> value.toString() // Default toString to handle non-primitive cases
             }
+        }
+    }
+}
+
+object VerifiableCredentialTypeContainerSerializer :
+    JsonTransformingSerializer<VerifiableCredentialTypeContainer>(VerifiableCredentialTypeContainer.serializer()) {
+    override fun transformDeserialize(element: JsonElement): JsonElement {
+        return if (element is JsonArray) {
+            element.firstOrNull() ?: element
+        } else {
+            element
         }
     }
 }
@@ -66,12 +78,16 @@ data class JWTVerifiableCredential @JvmOverloads constructor(
     @SerialName("@context")
     val context: Array<String> = arrayOf(),
     val type: Array<String> = arrayOf(),
+    @Serializable(with = VerifiableCredentialTypeContainerSerializer::class)
     val credentialSchema: VerifiableCredentialTypeContainer? = null,
     @Serializable(with = MapStringAnyToStringSerializer::class)
     val credentialSubject: Map<String, String>,
     val credentialStatus: CredentialStatus? = null,
+    @Serializable(with = VerifiableCredentialTypeContainerSerializer::class)
     val refreshService: VerifiableCredentialTypeContainer? = null,
+    @Serializable(with = VerifiableCredentialTypeContainerSerializer::class)
     val evidence: VerifiableCredentialTypeContainer? = null,
+    @Serializable(with = VerifiableCredentialTypeContainerSerializer::class)
     val termsOfUse: VerifiableCredentialTypeContainer? = null
 ) {
     /**

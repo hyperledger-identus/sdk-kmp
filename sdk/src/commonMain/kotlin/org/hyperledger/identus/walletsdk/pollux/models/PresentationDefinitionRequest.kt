@@ -181,10 +181,17 @@ data class JWTPresentationDefinitionRequest(
             data class PresentationFormat(
                 @SerialName("jwt")
                 val jwt: JwtFormat? = null,
+                @SerialName("sdjwt")
+                val sdjwt: SdJwtFormat? = null,
             )
 
             @Serializable
             data class JwtFormat(
+                val alg: List<String>
+            )
+
+            @Serializable
+            data class SdJwtFormat(
                 val alg: List<String>
             )
         }

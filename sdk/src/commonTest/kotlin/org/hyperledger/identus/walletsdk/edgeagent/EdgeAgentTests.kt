@@ -10,6 +10,7 @@ import io.ktor.http.HttpStatusCode
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -169,6 +170,51 @@ class EdgeAgentTests {
             prettyPrint = true
             isLenient = true
         }
+
+        // Setup castorMock to return a proper DIDDocument with authentication
+        runBlocking {
+            `when`(castorMock.resolveDID(any())).thenAnswer { invocation ->
+                val didString = invocation.arguments[0] as String
+                val parsedDID = try {
+                    DID(didString)
+                } catch (e: Exception) {
+                    DID("did", "prism", "test")
+                }
+                val authVerificationMethod = DIDDocument.VerificationMethod(
+                    id = DIDUrl(did = parsedDID, fragment = "authentication0"),
+                    controller = parsedDID,
+                    type = "EcdsaSecp256k1VerificationKey2019",
+                    publicKeyJwk = mapOf("kty" to "EC", "crv" to "secp256k1", "x" to "test", "y" to "test")
+                )
+                val authentication = DIDDocument.Authentication(
+                    urls = arrayOf(),
+                    verificationMethods = arrayOf(authVerificationMethod)
+                )
+                DIDDocument(parsedDID, arrayOf(authentication))
+            }
+        }
+
+        // Setup plutoMock to return a StorablePrivateKey for any key ID
+        `when`(plutoMock.getDIDPrivateKeyByID(any())).thenReturn(
+            flow {
+                emit(
+                    StorablePrivateKey(
+                        id = UUID.randomUUID().toString(),
+                        restorationIdentifier = "secp256k1+priv",
+                        data = "test_key_data",
+                        keyPathIndex = 0
+                    )
+                )
+            }
+        )
+
+        // Setup apolloMock to return a valid private key when restorePrivateKey is called
+        `when`(apolloMock.restorePrivateKey(any<String>(), any<String>())).thenReturn(
+            Secp256k1KeyPair.generateKeyPair(
+                seed = Seed(MnemonicHelper.createRandomSeed()),
+                curve = KeyCurve(Curve.SECP256K1)
+            ).privateKey
+        )
     }
 
     @Test
@@ -1746,6 +1792,10 @@ class EdgeAgentTests {
                         }
 
                         RestorationID.W3C -> {
+                            throw Exception("This should never happen in this test class")
+                        }
+
+                        RestorationID.SDJWT -> {
                             throw Exception("This should never happen in this test class")
                         }
                     }

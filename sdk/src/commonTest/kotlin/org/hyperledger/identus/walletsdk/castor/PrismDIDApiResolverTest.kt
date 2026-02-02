@@ -45,7 +45,7 @@ class PrismDIDApiResolverTest {
 
         val prismDidApiResolver = PrismDIDApiResolver(
             apollo = mockApollo,
-            cloudAgentUrl = "",
+            resolverBaseUrl = "",
             api = mockApi
         )
 

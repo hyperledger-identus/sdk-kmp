@@ -47,10 +47,15 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.hyperledger.identus.apollo.base64.base64UrlEncoded
 import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519KeyPair
 import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PrivateKey
-import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1KeyPair
+import org.hyperledger.identus.walletsdk.apollo.utils.KeyUsage
+import org.hyperledger.identus.walletsdk.apollo.utils.PrismDerivationPath
 import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PrivateKey
 import org.hyperledger.identus.walletsdk.apollo.utils.X25519KeyPair
 import org.hyperledger.identus.walletsdk.apollo.utils.X25519PrivateKey
+import org.hyperledger.identus.walletsdk.castor.did.prismdid.PrismDIDPublicKey
+import org.hyperledger.identus.walletsdk.castor.did.prismdid.defaultId
+import org.hyperledger.identus.walletsdk.castor.did.prismdid.id
+import org.hyperledger.identus.walletsdk.castor.did.prismdid.toUsage
 import org.hyperledger.identus.walletsdk.domain.DIDCOMM_MESSAGING
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Castor
@@ -71,7 +76,7 @@ import org.hyperledger.identus.walletsdk.domain.models.Curve
 import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.DIDPair
-import org.hyperledger.identus.walletsdk.domain.models.KeyCurve
+import org.hyperledger.identus.walletsdk.domain.models.DIDUrl
 import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.Message
 import org.hyperledger.identus.walletsdk.domain.models.PeerDID
@@ -110,6 +115,7 @@ import org.hyperledger.identus.walletsdk.edgeagent.protocols.outOfBand.OutOfBand
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.outOfBand.PrismOnboardingInvitation
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.AnoncredsPresentationOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.JWTPresentationOptions
+import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.SDJWTPresentationOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.Presentation
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationSubmissionOptionsAnoncreds
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationSubmissionOptionsJWT
@@ -123,7 +129,10 @@ import org.hyperledger.identus.walletsdk.pluto.PlutoRestoreTask
 import org.hyperledger.identus.walletsdk.pluto.models.backup.BackupV0_0_1
 import org.hyperledger.identus.walletsdk.pollux.models.AnoncredsPresentationDefinitionRequest
 import org.hyperledger.identus.walletsdk.pollux.models.CredentialRequestMeta
+import org.hyperledger.identus.walletsdk.pollux.models.DescriptorItemFormat
 import org.hyperledger.identus.walletsdk.pollux.models.JWTPresentationDefinitionRequest
+import org.hyperledger.identus.walletsdk.pollux.models.PresentationSubmission
+import org.hyperledger.identus.walletsdk.pollux.models.SDJWTCredential
 import org.kotlincrypto.hash.sha2.SHA256
 
 /**
@@ -372,10 +381,23 @@ open class EdgeAgent {
         services: Array<DIDDocument.Service> = emptyArray()
     ): DID {
         val index = keyPathIndex ?: (pluto.getPrismLastKeyPathIndex().first() + 1)
-        val keyPair = Secp256k1KeyPair.generateKeyPair(seed, KeyCurve(Curve.SECP256K1, index))
-        val did = castor.createPrismDID(masterPublicKey = keyPair.publicKey, services = services)
-        registerPrismDID(did, index, alias, listOf(keyPair.privateKey))
-        return did
+        val masterKey = apollo.createPrivateKey(
+            mapOf(
+                TypeKey().property to KeyTypes.EC,
+                CurveKey().property to Curve.SECP256K1.value,
+                SeedKey().property to seed.value.base64UrlEncoded,
+                DerivationPathKey().property to PrismDerivationPath(
+                    keyPurpose = KeyUsage.MASTER_KEY,
+                    keyIndex = index
+                ).toString()
+            )
+        )
+        return createNewPrismDID(
+            keys = listOf(Pair(KeyPurpose.MASTER, masterKey)),
+            keyPathIndex = index,
+            alias = alias,
+            services = services
+        )
     }
 
     /**
@@ -393,16 +415,39 @@ open class EdgeAgent {
         alias: String? = null,
         services: Array<DIDDocument.Service> = emptyArray()
     ): DID {
-        if (keys.any { it.first == KeyPurpose.MASTER }) {
-            throw EdgeAgentError.CannotFindDIDPrivateKey("")
-        }
         val finalKeys = keys.toMutableList()
         val index = keyPathIndex ?: (pluto.getPrismLastKeyPathIndex().first() + 1)
-        val keyPair = Secp256k1KeyPair.generateKeyPair(seed, KeyCurve(Curve.SECP256K1, index))
-        finalKeys.add(Pair(KeyPurpose.MASTER, keyPair.privateKey))
+        if (finalKeys.none { it.first == KeyPurpose.MASTER }) {
+            val masterKey = apollo.createPrivateKey(
+                mapOf(
+                    TypeKey().property to KeyTypes.EC,
+                    CurveKey().property to Curve.SECP256K1.value,
+                    SeedKey().property to seed.value.base64UrlEncoded,
+                    DerivationPathKey().property to PrismDerivationPath(
+                        keyPurpose = KeyUsage.MASTER_KEY,
+                        keyIndex = index
+                    ).toString()
+                )
+            )
+            finalKeys.add(Pair(KeyPurpose.MASTER, masterKey))
+        }
+        if (finalKeys.size == 1) {
+            val authenticationKey = apollo.createPrivateKey(
+                mapOf(
+                    TypeKey().property to KeyTypes.EC,
+                    CurveKey().property to Curve.SECP256K1.value,
+                    SeedKey().property to seed.value.base64UrlEncoded,
+                    DerivationPathKey().property to PrismDerivationPath(
+                        keyPurpose = KeyUsage.AUTHENTICATION_KEY,
+                        keyIndex = index
+                    ).toString()
+                )
+            )
+            finalKeys.add(Pair(KeyPurpose.AUTHENTICATION, authenticationKey))
+        }
 
         val did = castor.createPrismDID(finalKeys.map { Pair(it.first, it.second.publicKey()) }, services)
-        registerPrismDID(did, index, alias, finalKeys.map { it.second })
+        registerPrismDID(did, index, alias, finalKeys)
         return did
     }
 
@@ -418,14 +463,29 @@ open class EdgeAgent {
         did: DID,
         keyPathIndex: Int,
         alias: String? = null,
-        privateKeys: List<PrivateKey>
+        privateKeys: List<Pair<KeyPurpose, PrivateKey>>
     ) {
         pluto.storePrismDIDAndPrivateKeys(
             did = did,
             keyPathIndex = keyPathIndex,
             alias = alias ?: did.alias,
-            privateKeys.map { it as StorableKey }
+            privateKeys = emptyList()
         )
+        val keyUsageIndex = mutableMapOf<KeyPurpose, Int>()
+        privateKeys.forEach { (purpose, key) ->
+            val index = keyUsageIndex[purpose] ?: 0
+            keyUsageIndex[purpose] = index + 1
+            val keyId = DIDUrl(
+                did = did,
+                fragment = purpose.toUsage().id(index)
+            ).string()
+            pluto.storePrivateKeys(
+                storableKey = key as StorableKey,
+                did = did,
+                keyPathIndex = keyPathIndex,
+                metaId = keyId
+            )
+        }
     }
 
     /**
@@ -672,18 +732,13 @@ open class EdgeAgent {
 
         return when (val type = pollux.extractCredentialFormatFromMessage(offer.attachments)) {
             CredentialType.JWT -> {
-                val privateKeyKeyPath = pluto.getPrismDIDKeyPathIndex(did).first()
-
-                val keyPair = Secp256k1KeyPair.generateKeyPair(
-                    seed,
-                    KeyCurve(Curve.SECP256K1, privateKeyKeyPath)
-                )
+                val authKey = getPrismAuthenticationPrivateKey(did)
                 val offerDataString = offer.attachments.firstNotNullOf {
                     it.data.getDataAsJsonString()
                 }
                 val offerJsonObject = Json.parseToJsonElement(offerDataString).jsonObject
                 val jwtString =
-                    pollux.processCredentialRequestJWT(did, keyPair.privateKey, offerJsonObject)
+                    pollux.processCredentialRequestJWT(did, authKey, offerJsonObject)
                 val attachmentDescriptor =
                     AttachmentDescriptor(
                         mediaType = ContentType.Application.Json.toString(),
@@ -1058,12 +1113,7 @@ open class EdgeAgent {
                     throw PolluxError.InvalidPrismDID()
                 }
 
-                val privateKeyKeyPath = pluto.getPrismDIDKeyPathIndex(subjectDID).first()
-                val keyPair =
-                    Secp256k1KeyPair.generateKeyPair(
-                        seed,
-                        KeyCurve(Curve.SECP256K1, privateKeyKeyPath)
-                    )
+                val authKey = getPrismAuthenticationPrivateKey(subjectDID)
                 val requestData = request.attachments.firstNotNullOf {
                     it.data.getDataAsJsonString()
                 }
@@ -1072,7 +1122,7 @@ open class EdgeAgent {
                         requestData.encodeToByteArray(),
                         listOf(
                             CredentialOperationsOptions.SubjectDID(subjectDID),
-                            CredentialOperationsOptions.ExportableKey(keyPair.privateKey)
+                            CredentialOperationsOptions.ExportableKey(authKey)
                         )
                     )
                 } catch (e: Exception) {
@@ -1171,10 +1221,23 @@ open class EdgeAgent {
                 )
             }
 
+            CredentialType.SDJWT -> {
+                presentationDefinitionRequest = pollux.createPresentationDefinitionRequest(
+                    type = type,
+                    presentationClaims = presentationClaims,
+                    options = SDJWTPresentationOptions()
+                )
+                attachmentDescriptor = AttachmentDescriptor(
+                    mediaType = "application/json",
+                    format = CredentialType.PRESENTATION_EXCHANGE_DEFINITIONS.type,
+                    data = AttachmentBase64(presentationDefinitionRequest.base64UrlEncoded)
+                )
+            }
+
             else -> {
                 throw EdgeAgentError.CredentialTypeNotSupported(
                     type.type,
-                    arrayOf(CredentialType.JWT.type, CredentialType.ANONCREDS_PROOF_REQUEST.type)
+                    arrayOf(CredentialType.JWT.type, CredentialType.SDJWT.type, CredentialType.ANONCREDS_PROOF_REQUEST.type)
                 )
             }
         }
@@ -1201,7 +1264,51 @@ open class EdgeAgent {
 
             val presentationDefinitionRequestString =
                 requestPresentation.attachments.firstNotNullOf { it.data.getDataAsJsonString() }
-            if (presentationDefinitionRequestString.contains("jwt")) {
+            val presentationDefinitionJson = Json.parseToJsonElement(presentationDefinitionRequestString).jsonObject
+            val presentationDefinitionFormat =
+                presentationDefinitionJson["presentation_definition"]?.jsonObject?.get("format")?.jsonObject
+            val isSdJwt = presentationDefinitionFormat?.containsKey("sdjwt") == true
+            val isJwt = presentationDefinitionFormat?.containsKey("jwt") == true
+
+            if (isSdJwt) {
+                if (credential !is SDJWTCredential) {
+                    throw EdgeAgentError.InvalidCredentialError(credential)
+                }
+                val presentationDefinitionRequest =
+                    Json.decodeFromString<JWTPresentationDefinitionRequest>(presentationDefinitionRequestString)
+                val descriptorItems =
+                    presentationDefinitionRequest.presentationDefinition.inputDescriptors.map { inputDescriptor ->
+                        PresentationSubmission.Submission.DescriptorItem(
+                            id = inputDescriptor.id,
+                            format = DescriptorItemFormat.SD_JWT.value,
+                            path = "$.verifiablePresentation[0]"
+                        )
+                    }.toTypedArray()
+                val presentationProof =
+                    credential.presentation(presentationDefinitionRequestString.encodeToByteArray(), emptyList())
+                val presentationSubmission = PresentationSubmission(
+                    presentationSubmission = PresentationSubmission.Submission(
+                        definitionId = presentationDefinitionRequest.presentationDefinition.id
+                            ?: UUID.randomUUID().toString(),
+                        descriptorMap = descriptorItems
+                    ),
+                    verifiablePresentation = arrayOf(presentationProof)
+                )
+                val attachmentDescriptor = AttachmentDescriptor(
+                    mediaType = "application/json",
+                    format = CredentialType.PRESENTATION_EXCHANGE_SUBMISSION.type,
+                    data = AttachmentBase64(Json.encodeToString(presentationSubmission).base64UrlEncoded)
+                )
+
+                val fromDID = requestPresentation.to ?: createNewPeerDID(updateMediator = true)
+                return Presentation(
+                    body = Presentation.Body(),
+                    attachments = arrayOf(attachmentDescriptor),
+                    thid = requestPresentation.thid ?: requestPresentation.id,
+                    from = fromDID,
+                    to = requestPresentation.from
+                )
+            } else if (isJwt) {
                 // If the json can be used to instantiate a JWTPresentationDefinitionRequest, process the request
                 // as JWT.
                 val didString =
@@ -1411,6 +1518,35 @@ open class EdgeAgent {
         // 7. Restore the pluto instance
         val restoreTask = PlutoRestoreTask(castor, pluto, backupObject)
         restoreTask.run()
+    }
+
+    /**
+     * Decrypts a backup JWE and returns the raw JSON payload.
+     *
+     * @param jwe The JWE string that contains the encrypted backup.
+     * @return The decrypted backup JSON string.
+     * @throws UnknownError.SomethingWentWrongError if the JWE algorithm or key type is unsupported.
+     */
+    @Throws(UnknownError.SomethingWentWrongError::class)
+    fun decryptBackupJson(jwe: String): String {
+        val masterKey = createX25519PrivateKeyFrom(this.seed)
+        if (masterKey.isExportable().not()) {
+            throw UnknownError.SomethingWentWrongError("Key is not exportable")
+        }
+        val jwk = masterKey.getJwk().toNimbusJwk()
+
+        val jweObject = JWEObject.parse(jwe)
+        val alg = jweObject.header.algorithm
+        val enc = jweObject.header.encryptionMethod
+        val decrypter: JWEDecrypter =
+            if (alg == JWEAlgorithm.ECDH_ES_A256KW && enc == EncryptionMethod.A256CBC_HS512 && jwk is OctetKeyPair) {
+                X25519Decrypter(jwk)
+            } else {
+                throw UnknownError.SomethingWentWrongError("Unsupported JWE algorithm or key type")
+            }
+
+        jweObject.decrypt(decrypter)
+        return jweObject.payload.toString()
     }
 
     /**
@@ -1634,6 +1770,30 @@ open class EdgeAgent {
         return ConnectionlessRequestPresentation(
             requestPresentation = requestPresentation
         )
+    }
+
+    private suspend fun getPrismAuthenticationPrivateKey(did: DID): PrivateKey {
+        val kid = getPrismAuthenticationKid(did)
+        if (kid == null) {
+            throw EdgeAgentError.CannotFindDIDPrivateKey(did.toString())
+        }
+        val storablePrivateKey = pluto.getDIDPrivateKeyByID(kid).first()
+        if (storablePrivateKey == null) {
+            throw EdgeAgentError.CannotFindDIDPrivateKey(did.toString())
+        }
+        return apollo.restorePrivateKey(storablePrivateKey.restorationIdentifier, storablePrivateKey.data)
+    }
+
+    private suspend fun getPrismAuthenticationKid(did: DID): String? {
+        val didDocument = castor.resolveDID(did.toString())
+        val authentication = didDocument.coreProperties.firstOrNull { property ->
+            property::class == DIDDocument.Authentication::class
+        } as? DIDDocument.Authentication
+        val expectedFragment = PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.defaultId()
+        val verificationMethod = authentication?.verificationMethods?.find { method ->
+            method.id.did == did && method.id.fragment == expectedFragment
+        }
+        return verificationMethod?.id?.string()
     }
 
     /**

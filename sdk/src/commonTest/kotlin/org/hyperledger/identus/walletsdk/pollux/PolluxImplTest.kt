@@ -1182,7 +1182,8 @@ class PolluxImplTest {
         val json = Json.parseToJsonElement(header)
         assertTrue(json.jsonObject.containsKey("kid"))
         val kid = json.jsonObject["kid"]!!.jsonPrimitive.content
-        assertEquals("authentication0", kid)
+        // The kid is now the full DID URL (e.g., did:prism:...#authentication0)
+        assertTrue(kid.endsWith("#authentication0") || kid == "authentication0")
     }
 
     private suspend fun createVerificationTestCase(testCaseOptions: VerificationTestCase): Triple<String, String, String> {
