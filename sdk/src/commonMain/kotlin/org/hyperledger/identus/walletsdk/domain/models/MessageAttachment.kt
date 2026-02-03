@@ -12,7 +12,11 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNames
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import org.hyperledger.identus.apollo.base64.base64UrlDecoded
 import org.hyperledger.identus.walletsdk.edgeagent.EdgeAgentError
@@ -277,10 +281,17 @@ object AttachmentDataSerializer : KSerializer<AttachmentData> {
                 value
             )
 
-            is AttachmentData.AttachmentJsonData -> encoder.encodeSerializableValue(
-                AttachmentData.AttachmentJsonData.serializer(),
-                value
-            )
+            is AttachmentData.AttachmentJsonData -> {
+                val jsonEncoder = encoder as? JsonEncoder
+                    ?: throw SerializationException("AttachmentJsonData requires JSON encoder")
+                val element: JsonElement = try {
+                    Json.parseToJsonElement(value.data)
+                } catch (_: Exception) {
+                    JsonPrimitive(value.data)
+                }
+                val obj = buildJsonObject { put("json", element) }
+                jsonEncoder.encodeJsonElement(obj)
+            }
         }
     }
 
