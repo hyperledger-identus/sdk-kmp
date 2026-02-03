@@ -13,6 +13,7 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.CompositeDecoder
+import kotlinx.serialization.encoding.CompositeEncoder
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
@@ -174,6 +175,44 @@ object InputFieldFilterSerializer : KSerializer<InputFieldFilter> {
     }
 
     /**
+     * Encodes a List<Any> by detecting the type of the first element and mapping all elements to that type.
+     */
+    private fun encodeAnyList(
+        compositeOutput: CompositeEncoder,
+        descriptor: SerialDescriptor,
+        index: Int,
+        list: List<Any>
+    ) {
+        when (list[0]) {
+            is String -> compositeOutput.encodeSerializableElement(
+                descriptor,
+                index,
+                ListSerializer(serializer<String>()),
+                list.map { it as String }
+            )
+            is Int -> compositeOutput.encodeSerializableElement(
+                descriptor,
+                index,
+                ListSerializer(serializer<Int>()),
+                list.map { it as Int }
+            )
+            is Float -> compositeOutput.encodeSerializableElement(
+                descriptor,
+                index,
+                ListSerializer(serializer<Float>()),
+                list.map { it as Float }
+            )
+            is Double -> compositeOutput.encodeSerializableElement(
+                descriptor,
+                index,
+                ListSerializer(serializer<Double>()),
+                list.map { it as Double }
+            )
+            else -> throw Exception("Unknown data type of array during serialization of `InputFieldFilter`")
+        }
+    }
+
+    /**
      * Deserializes the input data from the provided decoder into an instance of the InputFieldFilter class.
      *
      * @param decoder The decoder used to decode the input data.
@@ -302,37 +341,7 @@ object InputFieldFilterSerializer : KSerializer<InputFieldFilter> {
 
         value.enum?.let {
             if (it.isNotEmpty()) {
-                if (it[0] is String) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        2,
-                        ListSerializer(serializer<String>()),
-                        it as List<String>
-                    )
-                } else if (it[0] is Int) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        2,
-                        ListSerializer(serializer<Int>()),
-                        it as List<Int>
-                    )
-                } else if (it[0] is Float) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        2,
-                        ListSerializer(serializer<Float>()),
-                        it as List<Float>
-                    )
-                } else if (it[0] is Double) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        2,
-                        ListSerializer(serializer<Double>()),
-                        it as List<Double>
-                    )
-                } else {
-                    throw Exception("Unknown data type of array during seralization of `InputFieldFilter`")
-                }
+                encodeAnyList(compositeOutput, descriptor, 2, it)
             } else {
                 compositeOutput.encodeNullableSerializableElement(
                     descriptor,
@@ -346,37 +355,7 @@ object InputFieldFilterSerializer : KSerializer<InputFieldFilter> {
 
         value.const?.let {
             if (it.isNotEmpty()) {
-                if (it[0] is String) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        3,
-                        ListSerializer(serializer<String>()),
-                        it as List<String>
-                    )
-                } else if (it[0] is Int) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        3,
-                        ListSerializer(serializer<Int>()),
-                        it as List<Int>
-                    )
-                } else if (it[0] is Float) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        3,
-                        ListSerializer(serializer<Float>()),
-                        it as List<Float>
-                    )
-                } else if (it[0] is Double) {
-                    compositeOutput.encodeSerializableElement(
-                        descriptor,
-                        3,
-                        ListSerializer(serializer<Double>()),
-                        it as List<Double>
-                    )
-                } else {
-                    throw Exception("Unknown data type of array during seralization of `InputFieldFilter`")
-                }
+                encodeAnyList(compositeOutput, descriptor, 3, it)
             } else {
                 compositeOutput.encodeNullableSerializableElement(
                     descriptor,

@@ -3,7 +3,6 @@ package org.hyperledger.identus.walletsdk.edgeagent.protocols
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Serializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -49,7 +48,6 @@ enum class ProtocolType(val value: String) {
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-@Serializer(forClass = ProtocolType::class)
 object ProtocolTypeSerializer : KSerializer<ProtocolType> {
     override val descriptor: SerialDescriptor
         get() = PrimitiveSerialDescriptor(PROTOCOL_TYPE, PrimitiveKind.STRING)

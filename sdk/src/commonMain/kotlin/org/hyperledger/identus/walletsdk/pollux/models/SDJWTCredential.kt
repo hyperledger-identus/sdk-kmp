@@ -24,8 +24,6 @@ import org.hyperledger.identus.walletsdk.domain.models.Credential
 import org.hyperledger.identus.walletsdk.domain.models.CredentialOperationsOptions
 import org.hyperledger.identus.walletsdk.domain.models.ProvableCredential
 import org.hyperledger.identus.walletsdk.domain.models.StorableCredential
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.ExportableKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PrivateKey
 
 @OptIn(ExperimentalSerializationApi::class)
 data class SDJWTCredential(
@@ -48,8 +46,7 @@ data class SDJWTCredential(
                     return@mapNotNull null
                 }
                 Claim(key = it.key, value = ClaimType.StringValue(it.value.toString()))
-            }?.toTypedArray()
-                ?: emptyArray<Claim>()
+            }.toTypedArray()
         }
 
     override val properties: Map<String, Any?>
@@ -67,12 +64,10 @@ data class SDJWTCredential(
     override var revoked: Boolean? = null
 
     override suspend fun presentation(request: ByteArray, options: List<CredentialOperationsOptions>): String {
-        var exportableKeyOption: PrivateKey? = null
         var disclosingClaims: List<String>? = null
 
         for (option in options) {
             when (option) {
-                is CredentialOperationsOptions.ExportableKey -> exportableKeyOption = option.key
                 is CredentialOperationsOptions.DisclosingClaims -> disclosingClaims = option.claims
                 else -> {}
             }
@@ -81,18 +76,13 @@ data class SDJWTCredential(
             disclosingClaims = sdjwt.disclosures.map { it.claim().first }
         }
 
-        val inluded = disclosingClaims
-            ?.mapNotNull {
-                val finalClaim: String
-                if (!it.startsWith("/")) {
-                    finalClaim = "/$it"
-                } else {
-                    finalClaim = it
-                }
+        val included = disclosingClaims
+            .mapNotNull {
+                val finalClaim = if (!it.startsWith("/")) "/$it" else it
                 JsonPointer.parse(finalClaim)
             }
-            ?.toSet()
-        val presentation = sdjwt.present(inluded!!)
+            .toSet()
+        val presentation = sdjwt.present(included)
         return presentation!!.serialize { (jwt, _) -> jwt }
     }
 
@@ -131,7 +121,7 @@ data class SDJWTCredential(
             override val claims: Array<Claim>
                 get() = sdjwt.jwt.second.map {
                     Claim(key = it.key, value = ClaimType.StringValue(it.value.toString()))
-                }?.toTypedArray() ?: emptyArray()
+                }.toTypedArray()
 
             override val properties: Map<String, Any?>
                 get() {

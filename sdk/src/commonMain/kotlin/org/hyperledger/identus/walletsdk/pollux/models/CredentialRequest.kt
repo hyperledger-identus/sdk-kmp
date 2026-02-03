@@ -8,6 +8,7 @@ import org.hyperledger.identus.walletsdk.domain.models.Credential
 
 /**
  * The `CredentialRequest` interface represents a request for verifiable credentials.
+ * Property names use snake_case to match the AnonCreds specification format.
  *
  * @property cred_def_id The ID of the credential definition.
  * @property blinded_ms The blinded master secret for the credential request.
@@ -15,7 +16,7 @@ import org.hyperledger.identus.walletsdk.domain.models.Credential
  * @property entropy The entropy for the credential request.
  * @property nonce The nonce for the credential request.
  */
-@Suppress("ktlint:standard:property-naming")
+@Suppress("ktlint:standard:property-naming") // AnonCreds spec requires snake_case naming
 interface CredentialRequest {
     val cred_def_id: String
     val blinded_ms: CredentialRequestBlindedMS
@@ -34,12 +35,13 @@ interface CredentialRequestBlindedMS {
 
 /**
  * This interface represents a blinded master secret correctness proof for a credential request.
+ * Property names use snake_case to match the AnonCreds specification format.
  *
  * @property c The blinded master secret contribution to the proof.
  * @property v_dash_cap The value used in the proof calculation.
  * @property m_caps The map of attribute names to their corresponding blinded value commitments.
  */
-@Suppress("ktlint:standard:property-naming")
+@Suppress("ktlint:standard:property-naming") // AnonCreds spec requires snake_case naming
 interface CredentialRequestBlindedMSCorrectnessProof {
     val c: String
     val v_dash_cap: String

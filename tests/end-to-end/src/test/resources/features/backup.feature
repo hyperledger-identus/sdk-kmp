@@ -51,7 +51,6 @@ Feature: Backup
       | did     | kid     | did_schema |
       | ed25519 | assert1 | secp256k1  |
 
-@bubu
   Scenario Outline: Restored backup should be functional for anoncred credential
     Given Cloud Agent is connected to Edge Agent
     And Cloud Agent uses did='<did>' and kid='<kid>' for issuance

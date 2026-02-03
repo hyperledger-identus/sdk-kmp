@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Represents a backup object with version, credentials, DIDs, DID pairs, keys, messages, link secret, and mediators.
+ * Class name uses underscores to clearly indicate the semantic version (0.0.1) of the backup format.
  *
  * @property version The version of the backup.
  * @property credentials The list of credentials.
@@ -17,7 +18,7 @@ import kotlinx.serialization.Serializable
  * @property linkSecret The link secret.
  * @property mediators The list of mediators.
  */
-@Suppress("ClassName")
+@Suppress("ClassName") // Underscore naming intentionally matches semantic version format (0.0.1)
 @Serializable
 class BackupV0_0_1
 @OptIn(ExperimentalSerializationApi::class)

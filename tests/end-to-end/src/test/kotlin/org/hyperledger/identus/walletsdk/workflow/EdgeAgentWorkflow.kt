@@ -316,7 +316,7 @@ object EdgeAgentWorkflow {
 
     fun backupAndRestoreToNewAgent(newAgent: Actor, originalAgent: Actor) {
         val backup = originalAgent.recall<String>("backup")
-        val seed = originalA gent.recall<Seed>("seed")
+        val seed = originalAgent.recall<Seed>("seed")
 
         val walletSdk = UseWalletSdk()
         walletSdk.recoverWallet(seed, backup)

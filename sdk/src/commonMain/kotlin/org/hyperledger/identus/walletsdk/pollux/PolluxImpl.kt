@@ -128,7 +128,6 @@ import java.security.spec.ECPublicKeySpec
  *
  * @property castor An API object for interacting with the Castor system.
  */
-@Suppress("LABEL_NAME_CLASH")
 open class PolluxImpl(
     val apollo: Apollo,
     val castor: Castor,
@@ -1193,9 +1192,9 @@ open class PolluxImpl(
                     val claims = sdjwtPresentation.recreateClaims { it.second }
                     val descriptorPath = DescriptorPath(JsonObject(claims))
 
-                    fields.forEach { field ->
+                    for (field in fields) {
                         if (field.optional) {
-                            return@forEach
+                            continue
                         }
                         val paths = field.path
                         val isValid = paths.any { path ->
@@ -1282,53 +1281,57 @@ open class PolluxImpl(
                                         var validClaim = false
                                         var reason = ""
                                         val paths = field.path
-                                        paths.forEach { path ->
+                                        pathsLoop@ for (path in paths) {
                                             val fieldValue =
                                                 verifiableCredentialDescriptorPath.getValue(path)
                                             if (fieldValue != null) {
                                                 if (field.filter != null) {
                                                     val filter: InputFieldFilter = field.filter
-                                                    filter.pattern?.let { pattern ->
+                                                    val pattern = filter.pattern
+                                                    if (pattern != null) {
                                                         val regexPattern = Regex(pattern)
                                                         if (regexPattern.matches(fieldValue.toString()) || fieldValue == pattern) {
                                                             validClaim = true
-                                                            return@forEach
+                                                            break@pathsLoop
                                                         } else {
                                                             reason =
                                                                 "Expected the $path field to be $pattern but got $fieldValue"
                                                         }
                                                     }
-                                                    filter.enum?.let { enum ->
-                                                        enum.forEach { predicate ->
+                                                    val filterEnum = filter.enum
+                                                    if (filterEnum != null) {
+                                                        for (predicate in filterEnum) {
                                                             if (fieldValue == predicate) {
                                                                 validClaim = true
-                                                                return@forEach
+                                                                break@pathsLoop
                                                             }
                                                         }
                                                         if (!validClaim) {
                                                             reason =
-                                                                "Expected the $path field to be one of ${filter.enum.joinToString { ", " }} but got $fieldValue"
+                                                                "Expected the $path field to be one of ${filterEnum.joinToString { ", " }} but got $fieldValue"
                                                         }
                                                     }
-                                                    filter.const?.let { const ->
-                                                        const.forEach { constValue ->
+                                                    val filterConst = filter.const
+                                                    if (filterConst != null) {
+                                                        for (constValue in filterConst) {
                                                             if (fieldValue == constValue) {
                                                                 validClaim = true
-                                                                return@forEach
+                                                                break@pathsLoop
                                                             }
                                                         }
                                                         if (!validClaim) {
                                                             reason =
-                                                                "Expected the $path field to be one of ${filter.const.joinToString { ", " }} but got $fieldValue"
+                                                                "Expected the $path field to be one of ${filterConst.joinToString { ", " }} but got $fieldValue"
                                                         }
                                                     }
-                                                    filter.value?.let { value ->
-                                                        if (value == fieldValue) {
+                                                    val filterValue = filter.value
+                                                    if (filterValue != null) {
+                                                        if (filterValue == fieldValue) {
                                                             validClaim = true
-                                                            return@forEach
+                                                            break@pathsLoop
                                                         } else {
                                                             reason =
-                                                                "Expected the $path field to be $value but got $fieldValue"
+                                                                "Expected the $path field to be $filterValue but got $fieldValue"
                                                         }
                                                     }
                                                 } else {

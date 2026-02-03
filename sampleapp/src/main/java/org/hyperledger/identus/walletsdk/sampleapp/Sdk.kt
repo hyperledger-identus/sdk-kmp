@@ -5,12 +5,9 @@ package org.hyperledger.identus.walletsdk.sampleapp
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import app.cash.sqldelight.db.SqlDriver
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.hyperledger.identus.walletsdk.SdkPlutoDb
 import org.hyperledger.identus.walletsdk.apollo.ApolloImpl
 import org.hyperledger.identus.walletsdk.castor.CastorImpl
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
@@ -29,7 +26,6 @@ import org.hyperledger.identus.walletsdk.edgeagent.mediation.MediationHandler
 import org.hyperledger.identus.walletsdk.mercury.MercuryImpl
 import org.hyperledger.identus.walletsdk.mercury.resolvers.DIDCommWrapper
 import org.hyperledger.identus.walletsdk.pluto.PlutoImpl
-import org.hyperledger.identus.walletsdk.pluto.data.DbConnection
 import org.hyperledger.identus.walletsdk.pluto.data.DbConnectionImpl
 import org.hyperledger.identus.walletsdk.pollux.PolluxImpl
 import java.net.UnknownHostException
@@ -104,16 +100,6 @@ class Sdk {
     }
 
     private fun createPluto(): Pluto {
-        val customDbConnection = object : DbConnection {
-            override var driver: SqlDriver? = null
-
-            override suspend fun connectDb(context: Any?): SqlDriver {
-                val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-                SdkPlutoDb.Schema.create(driver)
-                this.driver = driver
-                return driver
-            }
-        }
         return PlutoImpl(DbConnectionImpl())
     }
 
@@ -136,32 +122,32 @@ class Sdk {
     }
 
     private fun createSeed(): Seed {
-        val words = arrayOf(
-            "trumpet",
-            "mass",
-            "anger",
-            "eyebrow",
-            "gadget",
-            "sword",
-            "debate",
-            "spend",
-            "move",
-            "noble",
-            "motor",
-            "common",
-            "junk",
-            "feed",
-            "alone",
-            "whip",
-            "feed",
-            "front",
-            "radio",
-            "rookie",
-            "settle",
-            "provide",
-            "admit",
-            "peanut"
-        )
+//        val words = arrayOf(
+//            "trumpet",
+//            "mass",
+//            "anger",
+//            "eyebrow",
+//            "gadget",
+//            "sword",
+//            "debate",
+//            "spend",
+//            "move",
+//            "noble",
+//            "motor",
+//            "common",
+//            "junk",
+//            "feed",
+//            "alone",
+//            "whip",
+//            "feed",
+//            "front",
+//            "radio",
+//            "rookie",
+//            "settle",
+//            "provide",
+//            "admit",
+//            "peanut"
+//        )
 //        return apollo.createSeed(words, "")
         return Seed(
             Base64.getUrlDecoder()

@@ -217,7 +217,7 @@ data class RequestCredential @JvmOverloads constructor(
  * @return The created [RequestCredential] object.
  */
 @JvmOverloads
-inline fun <reified T : Serializable> RequestCredential.Companion.build(
+inline fun <reified T> RequestCredential.Companion.build(
     fromDID: DID,
     toDID: DID,
     thid: String?,

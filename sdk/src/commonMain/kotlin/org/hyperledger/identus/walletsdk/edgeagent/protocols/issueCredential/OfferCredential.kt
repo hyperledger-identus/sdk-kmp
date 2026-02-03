@@ -233,7 +233,7 @@ data class OfferCredential @JvmOverloads constructor(
  * @return The constructed OfferCredential object.
  */
 @JvmOverloads
-inline fun <reified T : Serializable> OfferCredential.Companion.build(
+inline fun <reified T> OfferCredential.Companion.build(
     fromDID: DID,
     toDID: DID,
     thid: String?,

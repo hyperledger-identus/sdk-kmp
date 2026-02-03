@@ -84,6 +84,9 @@ kotlin {
         compilations.all {
             kotlinOptions {
                 jvmTarget = "17"
+                freeCompilerArgs += listOf(
+                    "-Xexpect-actual-classes"
+                )
             }
         }
     }
@@ -92,6 +95,9 @@ kotlin {
         compilations.all {
             kotlinOptions {
                 jvmTarget = "17"
+                freeCompilerArgs += listOf(
+                    "-Xexpect-actual-classes"
+                )
             }
         }
         publishing {

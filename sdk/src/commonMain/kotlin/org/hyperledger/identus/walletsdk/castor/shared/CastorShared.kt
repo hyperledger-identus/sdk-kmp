@@ -101,7 +101,6 @@ internal class CastorShared {
             val publicKeysProto = grouped.flatMap { (purpose, pubKeys) ->
                 pubKeys
                     .mapIndexed { index, pk ->
-                        val curve = pk.getCurve()
                         val usage = purpose.toUsage()
                         PrismDIDPublicKey(
                             apollo = apollo,

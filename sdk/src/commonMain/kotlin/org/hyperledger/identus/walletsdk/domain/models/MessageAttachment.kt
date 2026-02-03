@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNames
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -334,7 +335,13 @@ object AttachmentDataSerializer : KSerializer<AttachmentData> {
             }
 
             json.containsKey("json") -> {
-                AttachmentData.AttachmentJsonData(data = Json.encodeToString(json["json"]!!.jsonObject))
+                val jsonValue = json["json"]!!
+                val dataString = when (jsonValue) {
+                    is JsonObject -> Json.encodeToString(jsonValue)
+                    is JsonPrimitive -> if (jsonValue.isString) jsonValue.content else jsonValue.toString()
+                    else -> Json.encodeToString(jsonValue)
+                }
+                AttachmentData.AttachmentJsonData(data = dataString)
             }
 
             else -> throw SerializationException("Unknown AttachmentData type")
