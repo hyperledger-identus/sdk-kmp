@@ -95,8 +95,7 @@ object EdgeAgentWorkflow {
                         format.contains("anoncred", ignoreCase = true) -> {
                             sdkContext.sdk.createNewPrismDID()
                         }
-                        format.contains("sd-jwt", ignoreCase = true) ||
-                            format.contains("sdjwt", ignoreCase = true) -> {
+                        format.contains("sdjwt", ignoreCase = true) -> {
                             val authKeyPair = Ed25519KeyPair.generateKeyPair()
                             sdkContext.sdk.createNewPrismDID(
                                 keys = listOf(Pair(KeyPurpose.AUTHENTICATION, authKeyPair.privateKey))
