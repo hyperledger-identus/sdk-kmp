@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
@@ -20,7 +21,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.lifecycle.lifecycleScope
 import org.hyperledger.identus.walletsdk.db.AppDatabase
 import org.hyperledger.identus.walletsdk.db.DatabaseClient
 import org.hyperledger.identus.walletsdk.edgeagent.EdgeAgent
@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
                     val sizeKb = (jwe.length / 1024)
                     Snackbar.make(
                         binding.root,
-                        "Backup saved (${sizeKb} KB)",
+                        "Backup saved ($sizeKb KB)",
                         Snackbar.LENGTH_LONG
                     ).show()
                 } catch (e: Exception) {
@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                     pendingBackupJwe = jweString
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("Backup created")
-                        .setMessage("Size: ${sizeKb} KB\nChoose where to save the file.")
+                        .setMessage("Size: $sizeKb KB\nChoose where to save the file.")
                         .setNeutralButton("Copy") { _, _ ->
                             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("Backup JWE", jweString))

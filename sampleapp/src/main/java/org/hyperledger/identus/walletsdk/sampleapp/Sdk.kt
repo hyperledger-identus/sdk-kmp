@@ -97,7 +97,6 @@ class Sdk {
         agentStatusStream.postValue(EdgeAgent.State.RUNNING)
     }
 
-
     suspend fun startPluto(context: Application) {
         (pluto as PlutoImpl).start(context)
     }

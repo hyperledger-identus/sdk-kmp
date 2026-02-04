@@ -21,8 +21,8 @@ import org.hyperledger.identus.walletsdk.pollux.models.SDJWTCredential
 import org.hyperledger.identus.walletsdk.sampleapp.Sdk
 import org.hyperledger.identus.walletsdk.sampleapp.databinding.CredentialDialogBinding
 import org.hyperledger.identus.walletsdk.sampleapp.databinding.FragmentProofRequestsBinding
-import org.hyperledger.identus.walletsdk.ui.messages.CustomArrayAdapter
 import org.hyperledger.identus.walletsdk.sampleapp.ui.messages.MessagesViewModel
+import org.hyperledger.identus.walletsdk.ui.messages.CustomArrayAdapter
 
 class ProofRequestsFragment : Fragment() {
 
