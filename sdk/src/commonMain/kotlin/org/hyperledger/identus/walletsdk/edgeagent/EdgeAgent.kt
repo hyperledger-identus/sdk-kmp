@@ -1072,6 +1072,15 @@ open class EdgeAgent {
         request: RequestPresentation,
         credential: T
     ): Presentation where T : Credential, T : ProvableCredential {
+        return preparePresentationForRequestProof(request, credential, null)
+    }
+
+    @Throws(PolluxError.InvalidPrismDID::class, EdgeAgentError.CredentialNotValidForPresentationRequest::class)
+    suspend fun <T> preparePresentationForRequestProof(
+        request: RequestPresentation,
+        credential: T,
+        disclosingClaims: List<String>?
+    ): Presentation where T : Credential, T : ProvableCredential {
         val attachmentFormat = request.attachments.first().format ?: CredentialType.Unknown.type
         // Presentation request from agent
         var mediaType: String? = null
@@ -1101,7 +1110,7 @@ open class EdgeAgent {
                         )
                     )
                 } catch (e: Exception) {
-                    throw EdgeAgentError.CredentialNotValidForPresentationRequest()
+                    throw EdgeAgentError.CredentialNotValidForPresentationRequest(e.message)
                 }
             }
 
@@ -1126,7 +1135,7 @@ open class EdgeAgent {
                         )
                     )
                 } catch (e: Exception) {
-                    throw EdgeAgentError.CredentialNotValidForPresentationRequest()
+                    throw EdgeAgentError.CredentialNotValidForPresentationRequest(e.message)
                 }
                 mediaType = JWT_MEDIA_TYPE
             }
@@ -1135,14 +1144,14 @@ open class EdgeAgent {
                 val requestData = request.attachments.firstNotNullOf {
                     it.data.getDataAsJsonString()
                 }
-                val claims = credential.claims.map { it.key }
+                val claims = disclosingClaims ?: credential.claims.map { it.key }
                 try {
                     presentationString = credential.presentation(
                         requestData.encodeToByteArray(),
                         listOf(CredentialOperationsOptions.DisclosingClaims(claims))
                     )
                 } catch (e: Exception) {
-                    throw EdgeAgentError.CredentialNotValidForPresentationRequest()
+                    throw EdgeAgentError.CredentialNotValidForPresentationRequest(e.message)
                 }
                 mediaType = SD_JWT_VC_TYPE
             }
@@ -1363,7 +1372,7 @@ open class EdgeAgent {
                 )
             }
         } catch (e: Exception) {
-            throw EdgeAgentError.CredentialNotValidForPresentationRequest()
+            throw EdgeAgentError.CredentialNotValidForPresentationRequest(e.message)
         }
     }
 

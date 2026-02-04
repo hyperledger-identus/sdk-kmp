@@ -2,7 +2,6 @@ import com.android.build.gradle.tasks.PackageAndroidArtifact
 import com.android.build.gradle.tasks.SourceJarTask
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.net.URL
 
 val currentModuleName: String = "sdk"
 
@@ -111,7 +110,7 @@ kotlin {
     applyDefaultHierarchyTemplate()
 
     sourceSets {
-        val commonMain by getting {
+        commonMain {
             kotlin.srcDir("${project(":protosLib").layout.buildDirectory.asFile.get()}/generated/source/proto/main/kotlin")
             resources.srcDir("${project(":protosLib").projectDir}/src/main")
             dependencies {
@@ -160,7 +159,7 @@ kotlin {
                 implementation(libs.sqldelight.sqlite.driver)
             }
         }
-        val commonTest by getting {
+        commonTest {
             dependencies {
                 implementation(kotlin("test-junit"))
                 implementation(libs.kotlinx.coroutines.test)
@@ -169,15 +168,15 @@ kotlin {
                 implementation(libs.mockito.kotlin)
             }
         }
-        val jvmMain by getting {
+        jvmMain {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ktor.client.java)
                 implementation(libs.sqldelight.sqlite.driver)
             }
         }
-        val jvmTest by getting
-        val androidMain by getting {
+        jvmTest { }
+        androidMain {
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.ktor.client.okhttp)
@@ -185,7 +184,7 @@ kotlin {
                 implementation(libs.sqldelight.android.driver)
             }
         }
-        val androidInstrumentedTest by getting {
+        getByName("androidInstrumentedTest") {
             dependencies {
                 implementation(libs.androidx.test.espresso)
                 implementation(libs.androidx.test.junit)
@@ -272,24 +271,24 @@ tasks.withType<DokkaTask>().configureEach {
             )
             sourceLink {
                 localDirectory.set(projectDir.resolve("src"))
-                remoteUrl.set(URL("https://github.com/hyperledger-identus/sdk-kmp/tree/main/src"))
+                remoteUrl.set(uri("https://github.com/hyperledger-identus/sdk-kmp/tree/main/src").toURL())
                 remoteLineSuffix.set("#L")
             }
             externalDocumentationLink {
-                url.set(URL("https://kotlinlang.org/api/latest/jvm/stdlib/"))
+                url.set(uri("https://kotlinlang.org/api/latest/jvm/stdlib/").toURL())
             }
             externalDocumentationLink {
-                url.set(URL("https://kotlinlang.org/api/kotlinx.serialization/"))
+                url.set(uri("https://kotlinlang.org/api/kotlinx.serialization/").toURL())
             }
             externalDocumentationLink {
-                url.set(URL("https://api.ktor.io/"))
+                url.set(uri("https://api.ktor.io/").toURL())
             }
             externalDocumentationLink {
-                url.set(URL("https://kotlinlang.org/api/kotlinx-datetime/"))
-                packageListUrl.set(URL("https://kotlinlang.org/api/kotlinx-datetime/"))
+                url.set(uri("https://kotlinlang.org/api/kotlinx-datetime/").toURL())
+                packageListUrl.set(uri("https://kotlinlang.org/api/kotlinx-datetime/").toURL())
             }
             externalDocumentationLink {
-                url.set(URL("https://kotlinlang.org/api/kotlinx.coroutines/"))
+                url.set(uri("https://kotlinlang.org/api/kotlinx.coroutines/").toURL())
             }
         }
     }

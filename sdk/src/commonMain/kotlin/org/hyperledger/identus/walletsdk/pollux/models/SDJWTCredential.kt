@@ -86,6 +86,10 @@ data class SDJWTCredential(
         return presentation!!.serialize { (jwt, _) -> jwt }
     }
 
+    fun disclosureClaimKeys(): List<String> {
+        return sdjwt.disclosures.map { it.claim().first }
+    }
+
     /**
      * Converts the current instance of [JWTCredential] to a [StorableCredential].
      *
