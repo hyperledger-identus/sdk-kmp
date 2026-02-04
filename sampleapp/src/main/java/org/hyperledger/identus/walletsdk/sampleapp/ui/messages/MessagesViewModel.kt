@@ -19,16 +19,14 @@ import org.hyperledger.identus.walletsdk.domain.models.AnoncredsInputFieldFilter
 import org.hyperledger.identus.walletsdk.domain.models.AnoncredsPresentationClaims
 import org.hyperledger.identus.walletsdk.domain.models.Credential
 import org.hyperledger.identus.walletsdk.domain.models.CredentialType
-import org.hyperledger.identus.walletsdk.domain.models.Curve
 import org.hyperledger.identus.walletsdk.domain.models.DID
 import org.hyperledger.identus.walletsdk.domain.models.DIDDocument
 import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
 import org.hyperledger.identus.walletsdk.domain.models.Message
 import org.hyperledger.identus.walletsdk.domain.models.ProvableCredential
 import org.hyperledger.identus.walletsdk.domain.models.RequestedAttributes
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurveKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.KeyTypes
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.TypeKey
+import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519KeyPair
+import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1KeyPair
 import org.hyperledger.identus.walletsdk.edgeagent.DIDCOMM1
 import org.hyperledger.identus.walletsdk.edgeagent.EdgeAgentError
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.ProtocolType
@@ -37,14 +35,16 @@ import org.hyperledger.identus.walletsdk.edgeagent.protocols.issueCredential.Off
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.RequestPresentation
 import org.hyperledger.identus.walletsdk.sampleapp.Sdk
 import org.hyperledger.identus.walletsdk.sampleapp.db.Message as MessageEntity
+import org.hyperledger.identus.walletsdk.sampleapp.db.PendingProofRequest
 
 class MessagesViewModel(application: Application) : AndroidViewModel(application) {
 
     private var messages: MutableLiveData<List<Message>> = MutableLiveData()
-    private var proofRequestToProcess: MutableLiveData<Pair<Message, List<Credential>>> =
-        MutableLiveData()
+    private val pendingProofRequests: MutableLiveData<List<Message>> = MutableLiveData(emptyList())
     private val issuedCredentials: ArrayList<String> = arrayListOf()
     private val processedOffers: ArrayList<String> = arrayListOf()
+    private val processedProofRequests: ArrayList<String> = arrayListOf()
+    private val pendingProofRequestIds: MutableSet<String> = mutableSetOf()
     private val db: AppDatabase = DatabaseClient.getInstance()
     private val revokedCredentialsNotified: MutableList<Credential> = mutableListOf()
     private var revokedCredentials: MutableLiveData<List<Credential>> = MutableLiveData()
@@ -53,6 +53,7 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
     init {
         viewModelScope.launch(Dispatchers.IO) {
             db.messageDao().isMessageRead("")
+            pendingProofRequestIds.addAll(db.proofRequestDao().getAllIds())
         }
     }
 
@@ -65,12 +66,15 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
 
     fun messagesStream(): LiveData<List<Message>> {
         viewModelScope.launch(Dispatchers.IO) {
-            Sdk.getInstance().agent.let {
-                it.handleReceivedMessagesEvents().collect { list ->
-                    insertMessages(list)
-                    messages.postValue(list)
-                    processMessages(list)
-                }
+            val sdk = Sdk.getInstance()
+            // Use pluto.getAllMessages() to show both sent and received messages
+            sdk.pluto.getAllMessages().collect { list ->
+                insertMessages(list)
+                messages.postValue(list)
+                refreshPendingFromMessages(list)
+                // Only process received messages (for auto-handling offers, credentials, etc.)
+                val receivedMessages = list.filter { it.direction == Message.Direction.RECEIVED }
+                processMessages(receivedMessages)
             }
         }
         return messages
@@ -144,9 +148,13 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun proofRequestToProcess(): LiveData<Pair<Message, List<Credential>>> = proofRequestToProcess
+    fun pendingProofRequests(): LiveData<List<Message>> = pendingProofRequests
 
-    fun preparePresentationProof(credential: Credential, message: Message) {
+    fun preparePresentationProof(
+        credential: Credential,
+        message: Message,
+        disclosingClaims: List<String>? = null
+    ) {
         val sdk = Sdk.getInstance()
         sdk.agent.let { agent ->
             sdk.mercury.let { mercury ->
@@ -155,11 +163,15 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
                         try {
                             val presentation = agent.preparePresentationForRequestProof(
                                 RequestPresentation.fromMessage(message),
-                                credential
+                                credential,
+                                disclosingClaims
                             )
                             sdk.agent.sendMessage(presentation.makeMessage())
+                            removePendingProofRequest(message.id)
                         } catch (e: EdgeAgentError.CredentialNotValidForPresentationRequest) {
                             errorLiveData.postValue(e.message)
+                        } catch (e: Exception) {
+                            errorLiveData.postValue(e.message ?: "Unknown error")
                         }
                     }
                 }
@@ -225,13 +237,28 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
                                         processedOffers.add(it)
                                         viewModelScope.launch {
                                             val offer = OfferCredential.fromMessage(message)
-                                            val authenticationKey = agent.apollo.createPrivateKey(
-                                                mapOf(
-                                                    TypeKey().property to KeyTypes.Curve25519,
-                                                    CurveKey().property to Curve.ED25519.value,
-                                                )
-                                            )
-                                            val subjectDID = agent.createNewPrismDID(keys = listOf(Pair(KeyPurpose.AUTHENTICATION, authenticationKey)))
+                                            // Choose key type based on credential format (matching e2e test logic)
+                                            val format = offer.attachments.firstOrNull()?.format.orEmpty()
+                                            val subjectDID = when {
+                                                format.contains("anoncred", ignoreCase = true) -> {
+                                                    // AnonCreds: use default DID
+                                                    agent.createNewPrismDID()
+                                                }
+                                                format.contains("sdjwt", ignoreCase = true) -> {
+                                                    // SD-JWT: use Ed25519 key
+                                                    val authKeyPair = Ed25519KeyPair.generateKeyPair()
+                                                    agent.createNewPrismDID(
+                                                        keys = listOf(Pair(KeyPurpose.AUTHENTICATION, authKeyPair.privateKey))
+                                                    )
+                                                }
+                                                else -> {
+                                                    // JWT and others: use Secp256k1 key
+                                                    val authKeyPair = Secp256k1KeyPair.generateKeyPair()
+                                                    agent.createNewPrismDID(
+                                                        keys = listOf(Pair(KeyPurpose.AUTHENTICATION, authKeyPair.privateKey))
+                                                    )
+                                                }
+                                            }
                                             val request =
                                                 agent.prepareRequestCredentialWithIssuer(
                                                     subjectDID,
@@ -258,9 +285,10 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
                             }
 
                             if (message.piuri == ProtocolType.DidcommRequestPresentation.value && message.direction == Message.Direction.RECEIVED) {
-                                viewModelScope.launch {
-                                    agent.getAllCredentials().collect {
-                                        proofRequestToProcess.postValue(Pair(message, it))
+                                message.thid?.let {
+                                    if (!processedProofRequests.contains(it)) {
+                                        processedProofRequests.add(it)
+                                        addPendingProofRequest(message)
                                     }
                                 }
                             }
@@ -272,5 +300,45 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+    }
+
+    private fun addPendingProofRequest(message: Message) {
+        synchronized(pendingProofRequestIds) {
+            if (pendingProofRequestIds.contains(message.id)) return
+            pendingProofRequestIds.add(message.id)
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            db.proofRequestDao().insertPending(
+                PendingProofRequest(
+                    messageId = message.id,
+                    thid = message.thid,
+                    createdAt = System.currentTimeMillis()
+                )
+            )
+        }
+        val current = pendingProofRequests.value.orEmpty()
+        pendingProofRequests.postValue(current + message)
+    }
+
+    private fun removePendingProofRequest(messageId: String) {
+        val removed = synchronized(pendingProofRequestIds) {
+            pendingProofRequestIds.remove(messageId)
+        }
+        if (removed) {
+            viewModelScope.launch(Dispatchers.IO) {
+                db.proofRequestDao().deletePending(messageId)
+            }
+        }
+        val current = pendingProofRequests.value.orEmpty()
+        pendingProofRequests.postValue(current.filterNot { it.id == messageId })
+    }
+
+    private fun refreshPendingFromMessages(messages: List<Message>) {
+        if (pendingProofRequestIds.isEmpty()) {
+            pendingProofRequests.postValue(emptyList())
+            return
+        }
+        val pending = messages.filter { pendingProofRequestIds.contains(it.id) }
+        pendingProofRequests.postValue(pending)
     }
 }
