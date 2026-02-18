@@ -1,8 +1,8 @@
 # Edge Agent SDK - Kotlin Multiplatform (Android/JVM)
 
-![badge-platform-android]
-![badge-platform-jvm]
 [![Coverage Status](https://coveralls.io/repos/github/hyperledger-identus/sdk-kmp/badge.svg?branch=main)](https://coveralls.io/github/hyperledger-identus/sdk-kmp?branch=main)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=hyperledger-identus_sdk-kmp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=hyperledger-identus_sdk-kmp)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11735/badge)](https://www.bestpractices.dev/projects/11735)
 
 # Welcome to Edge Agent SDK KMP (Kotlin Multiplatform)
 
