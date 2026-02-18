@@ -1,3 +1,9 @@
+<p align="center">
+    <a href="https://www.lfdecentralizedtrust.org/projects/identus">
+        <img src="https://raw.githubusercontent.com/hyperledger-identus/docs/refs/heads/main/static/img/graphics/identus-hero.svg" alt="identus-logo" height="99px" />
+    </a>
+</p>
+
 # Edge Agent SDK - Kotlin Multiplatform (Android/JVM)
 
 [![Coverage Status](https://coveralls.io/repos/github/hyperledger-identus/sdk-kmp/badge.svg?branch=main)](https://coveralls.io/github/hyperledger-identus/sdk-kmp?branch=main)
