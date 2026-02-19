@@ -10,6 +10,9 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=hyperledger-identus_sdk-kmp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=hyperledger-identus_sdk-kmp)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11735/badge)](https://www.bestpractices.dev/projects/11735)
 
+[![GitHub release](https://img.shields.io/github/release/hyperledger-identus/sdk-kmp.svg)](https://github.com/hyperledger-identus/sdk-kmp/releases)
+[![Discord](https://img.shields.io/discord/905194001349627914?label=discord)](https://discord.com/channels/905194001349627914/1230596020790886490)
+
 # Welcome to Edge Agent SDK KMP (Kotlin Multiplatform)
 
 The following will explain how to use the SDK in your project, how to prepare your development environment if you wish to contribute and some basic considerations around the project.
