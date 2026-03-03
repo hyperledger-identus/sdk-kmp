@@ -25,9 +25,15 @@ import com.nimbusds.jose.jwk.OctetKeyPair
 import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import io.ipfs.multibase.Multibase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.setl.rdf.normalization.RdfNormalize
+import eu.europa.ec.eudi.sdjwt.JwtSignatureVerifier
+import eu.europa.ec.eudi.sdjwt.KeyBindingVerifier
+import eu.europa.ec.eudi.sdjwt.NoSignatureValidation
+import eu.europa.ec.eudi.sdjwt.SdJwtVerifier
+import eu.europa.ec.eudi.sdjwt.recreateClaims
 import java.io.ByteArrayInputStream
 import java.io.StringWriter
 import java.security.interfaces.ECPrivateKey
@@ -49,7 +55,11 @@ import org.hyperledger.identus.apollo.base64.base64UrlDecoded
 import org.hyperledger.identus.apollo.base64.base64UrlDecodedBytes
 import org.hyperledger.identus.apollo.base64.base64UrlEncoded
 import org.hyperledger.identus.walletsdk.apollo.helpers.gunzip
+import org.hyperledger.identus.apollo.utils.KMMECSecp256k1PublicKey
+import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PublicKey
 import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PrivateKey
+import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PublicKey
+import org.hyperledger.identus.walletsdk.apollo.utils.X25519PublicKey
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.PrismDIDPublicKey
 import org.hyperledger.identus.walletsdk.castor.did.prismdid.defaultId
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
@@ -89,6 +99,7 @@ import org.hyperledger.identus.walletsdk.domain.models.keyManagement.VerifiableK
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.AnoncredsPresentationOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.JWTPresentationOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationOptions
+import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.SDJWTPresentationOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationSubmissionOptions
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationSubmissionOptionsAnoncreds
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.PresentationSubmissionOptionsJWT
@@ -117,7 +128,6 @@ import java.security.spec.ECPublicKeySpec
  *
  * @property castor An API object for interacting with the Castor system.
  */
-@Suppress("LABEL_NAME_CLASH")
 open class PolluxImpl(
     val apollo: Apollo,
     val castor: Castor,
@@ -892,10 +902,82 @@ open class PolluxImpl(
                 )
             }
 
+            CredentialType.SDJWT -> {
+                if (options !is SDJWTPresentationOptions) {
+                    throw PolluxError.PresentationDefinitionRequestError("When type is ${type.type}, presentation options must be ${SDJWTPresentationOptions::class.simpleName}")
+                }
+                if (presentationClaims !is JWTPresentationClaims) {
+                    throw PolluxError.PresentationDefinitionRequestError("When type is ${type.type}, presentation claims must be ${JWTPresentationClaims::class.simpleName}")
+                }
+                val sdjwtAlgs = options.sdjwt
+                if (sdjwtAlgs.isEmpty()) {
+                    throw PolluxError.InvalidJWTPresentationDefinitionError("Presentation option must contain at least one valid SDJWT alg that is not empty.")
+                }
+                val paths = presentationClaims.claims.keys
+                val mutableListFields: MutableList<JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.Constraints.Field> =
+                    paths.map { path ->
+                        JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.Constraints.Field(
+                            path = arrayOf("$.vc.credentialSubject.$path", "$.credentialSubject.$path", "$.$path"),
+                            id = UUID.randomUUID().toString(),
+                            optional = false,
+                            filter = presentationClaims.claims[path],
+                            name = path,
+                        )
+                    } as MutableList
+
+                presentationClaims.issuer?.let { issuer ->
+                    mutableListFields.add(
+                        JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.Constraints.Field(
+                            path = arrayOf("$.issuer", "$.iss", "$.vc.iss", "$.vc.issuer"),
+                            optional = false,
+                            id = UUID.randomUUID().toString(),
+                            filter = InputFieldFilter(
+                                type = "String",
+                                pattern = issuer
+                            ),
+                            name = "issuer"
+                        )
+                    )
+                }
+
+                val constraints = JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.Constraints(
+                    fields = mutableListFields.toTypedArray(),
+                    limitDisclosure =
+                    JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.Constraints.LimitDisclosure.REQUIRED
+                )
+
+                format =
+                    JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.PresentationFormat(
+                        sdjwt = JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor.SdJwtFormat(
+                            sdjwtAlgs.toList()
+                        )
+                    )
+
+                inputDescriptor = JWTPresentationDefinitionRequest.PresentationDefinition.InputDescriptor(
+                    name = options.name,
+                    purpose = options.purpose,
+                    constraints = constraints,
+                    format = format
+                )
+
+                return Json.encodeToString(
+                    JWTPresentationDefinitionRequest(
+                        presentationDefinition = JWTPresentationDefinitionRequest.PresentationDefinition(
+                            inputDescriptors = arrayOf(inputDescriptor),
+                            format = format
+                        ),
+                        options = JWTPresentationDefinitionRequest.PresentationDefinitionOptions(
+                            domain = options.domain,
+                            challenge = options.challenge
+                        )
+                    )
+                )
+            }
+
             else -> {
                 throw PolluxError.CredentialTypeNotSupportedError(
                     "Credential type ${type.type} not supported. " +
-                        "Must be ${CredentialType.JWT.type} or ${CredentialType.ANONCREDS_PROOF_REQUEST.type}"
+                        "Must be ${CredentialType.JWT.type}, ${CredentialType.SDJWT.type} or ${CredentialType.ANONCREDS_PROOF_REQUEST.type}"
                 )
             }
         }
@@ -909,7 +991,7 @@ open class PolluxImpl(
         if (credential::class != JWTCredential::class) {
             throw PolluxError.CredentialTypeNotSupportedError("Credential type not supported, must be JWTCredential")
         }
-        if (privateKey == null || privateKey::class != Secp256k1PrivateKey::class) {
+        if (privateKey::class != Secp256k1PrivateKey::class) {
             throw PolluxError.PrivateKeyTypeNotSupportedError()
         }
         privateKey as Secp256k1PrivateKey
@@ -941,9 +1023,6 @@ open class PolluxImpl(
                     actual = privateKey::class.simpleName
                 )
             }
-            val signedChallenge =
-                privateKey.sign(jwtPresentationDefinitionRequest.options.challenge.encodeToByteArray())
-
             val presentationJwt = signClaimsProofPresentationJWT(
                 subjectDID = DID(subject),
                 privateKey = privateKey,
@@ -1080,8 +1159,12 @@ open class PolluxImpl(
             val descriptorMap = DescriptorPath(Json.encodeToJsonElement(presentationSubmission))
             val descriptorMaps = presentationSubmission.presentationSubmission.descriptorMap
             descriptorMaps.forEach { descriptorItem ->
-                if (descriptorItem.format != DescriptorItemFormat.JWT_VP.value) {
-                    throw PolluxError.VerificationUnsuccessful("Invalid submission, ${descriptorItem.path} expected to have format ${DescriptorItemFormat.JWT_VP.value}")
+                if (descriptorItem.format != DescriptorItemFormat.JWT_VP.value &&
+                    descriptorItem.format != DescriptorItemFormat.SD_JWT.value
+                ) {
+                    throw PolluxError.VerificationUnsuccessful(
+                        "Invalid submission, ${descriptorItem.path} expected to have format ${DescriptorItemFormat.JWT_VP.value} or ${DescriptorItemFormat.SD_JWT.value}"
+                    )
                 }
 
                 var newPath: String? = null
@@ -1094,6 +1177,44 @@ open class PolluxImpl(
                 val jws =
                     descriptorMap.getValue(newPath ?: descriptorItem.path)
                         ?: throw PolluxError.VerificationUnsuccessful("Could not find ${descriptorItem.path} value")
+                if (descriptorItem.format == DescriptorItemFormat.SD_JWT.value) {
+                    val sdjwtPresentation = SdJwtVerifier.verifyPresentation(
+                        jwtSignatureVerifier = JwtSignatureVerifier.NoSignatureValidation,
+                        keyBindingVerifier = KeyBindingVerifier.MustNotBePresent,
+                        unverifiedSdJwt = jws as String
+                    ).getOrThrow()
+                    val inputDescriptor =
+                        inputDescriptors.firstOrNull { it.id == descriptorItem.id }
+                            ?: throw PolluxError.VerificationUnsuccessful(
+                                "Invalid submission, no input descriptor for ${descriptorItem.id}"
+                            )
+                    val fields = inputDescriptor.constraints.fields ?: emptyArray()
+                    val claims = sdjwtPresentation.recreateClaims { it.second }
+                    val descriptorPath = DescriptorPath(JsonObject(claims))
+
+                    for (field in fields) {
+                        if (field.optional) {
+                            continue
+                        }
+                        val paths = field.path
+                        val isValid = paths.any { path ->
+                            val value = descriptorPath.getValue(path) ?: return@any false
+                            val pattern = field.filter?.pattern
+                            if (pattern.isNullOrBlank()) {
+                                true
+                            } else {
+                                Regex(pattern).matches(value.toString())
+                            }
+                        }
+                        if (!isValid) {
+                            throw PolluxError.VerificationUnsuccessful(
+                                "Invalid submission, missing or invalid claim ${field.name ?: "unknown"}"
+                            )
+                        }
+                    }
+                    return true
+                }
+
                 val presentation = JWTCredential.fromJwtString(jws as String)
                 val issuer = presentation.issuer
 
@@ -1127,11 +1248,15 @@ open class PolluxImpl(
                         }
 
                         val didDocHolder = castor.resolveDID(verifiableCredential.issuer)
-                        val authenticationMethodHolder =
-                            didDocHolder.coreProperties.find { it::class == DIDDocument.Authentication::class }
-                                ?: throw PolluxError.VerificationUnsuccessful("Holder core properties must contain Authentication")
-                        val ecPublicKeysHolder =
-                            extractEcPublicKeyFromVerificationMethod(authenticationMethodHolder)
+                        val verificationMethods = getVerificationMethodsForJwtSignature(didDocHolder)
+                        val ecPublicKeysHolder = extractEcPublicKeysFromVerificationMethods(verificationMethods)
+                            .filter { it.getCurve() == Curve.SECP256K1.value || it.getCurve() == Curve.ED25519.value }
+                            .toTypedArray()
+                        if (ecPublicKeysHolder.isEmpty()) {
+                            throw PolluxError.VerificationUnsuccessful(
+                                "Issuer core properties must contain verification methods suitable for JWT"
+                            )
+                        }
 
                         if (!verifyJWTSignatureWithEcPublicKey(
                                 verifiableCredential.id,
@@ -1156,53 +1281,57 @@ open class PolluxImpl(
                                         var validClaim = false
                                         var reason = ""
                                         val paths = field.path
-                                        paths.forEach { path ->
+                                        pathsLoop@ for (path in paths) {
                                             val fieldValue =
                                                 verifiableCredentialDescriptorPath.getValue(path)
                                             if (fieldValue != null) {
                                                 if (field.filter != null) {
                                                     val filter: InputFieldFilter = field.filter
-                                                    filter.pattern?.let { pattern ->
+                                                    val pattern = filter.pattern
+                                                    if (pattern != null) {
                                                         val regexPattern = Regex(pattern)
                                                         if (regexPattern.matches(fieldValue.toString()) || fieldValue == pattern) {
                                                             validClaim = true
-                                                            return@forEach
+                                                            break@pathsLoop
                                                         } else {
                                                             reason =
                                                                 "Expected the $path field to be $pattern but got $fieldValue"
                                                         }
                                                     }
-                                                    filter.enum?.let { enum ->
-                                                        enum.forEach { predicate ->
+                                                    val filterEnum = filter.enum
+                                                    if (filterEnum != null) {
+                                                        for (predicate in filterEnum) {
                                                             if (fieldValue == predicate) {
                                                                 validClaim = true
-                                                                return@forEach
+                                                                break@pathsLoop
                                                             }
                                                         }
                                                         if (!validClaim) {
                                                             reason =
-                                                                "Expected the $path field to be one of ${filter.enum.joinToString { ", " }} but got $fieldValue"
+                                                                "Expected the $path field to be one of ${filterEnum.joinToString { ", " }} but got $fieldValue"
                                                         }
                                                     }
-                                                    filter.const?.let { const ->
-                                                        const.forEach { constValue ->
+                                                    val filterConst = filter.const
+                                                    if (filterConst != null) {
+                                                        for (constValue in filterConst) {
                                                             if (fieldValue == constValue) {
                                                                 validClaim = true
-                                                                return@forEach
+                                                                break@pathsLoop
                                                             }
                                                         }
                                                         if (!validClaim) {
                                                             reason =
-                                                                "Expected the $path field to be one of ${filter.const.joinToString { ", " }} but got $fieldValue"
+                                                                "Expected the $path field to be one of ${filterConst.joinToString { ", " }} but got $fieldValue"
                                                         }
                                                     }
-                                                    filter.value?.let { value ->
-                                                        if (value == fieldValue) {
+                                                    val filterValue = filter.value
+                                                    if (filterValue != null) {
+                                                        if (filterValue == fieldValue) {
                                                             validClaim = true
-                                                            return@forEach
+                                                            break@pathsLoop
                                                         } else {
                                                             reason =
-                                                                "Expected the $path field to be $value but got $fieldValue"
+                                                                "Expected the $path field to be $filterValue but got $fieldValue"
                                                         }
                                                     }
                                                 } else {
@@ -1320,6 +1449,90 @@ open class PolluxImpl(
         return publicKeys.toTypedArray()
     }
 
+    private fun getVerificationMethodsForJwtSignature(didDocument: DIDDocument): Array<DIDDocument.VerificationMethod> {
+        val methods = mutableListOf<DIDDocument.VerificationMethod>()
+        didDocument.coreProperties.forEach { coreProperty ->
+            when (coreProperty) {
+                is DIDDocument.AssertionMethod -> methods.addAll(coreProperty.verificationMethods)
+                is DIDDocument.Authentication -> methods.addAll(coreProperty.verificationMethods)
+                else -> Unit
+            }
+        }
+        if (methods.isNotEmpty()) {
+            return methods.toTypedArray()
+        }
+        val verificationMethods = didDocument.coreProperties.find { it::class == DIDDocument.VerificationMethods::class }
+            as? DIDDocument.VerificationMethods
+        return verificationMethods?.values ?: emptyArray()
+    }
+
+    private fun extractEcPublicKeysFromVerificationMethods(
+        verificationMethods: Array<DIDDocument.VerificationMethod>
+    ): List<PublicKey> {
+        return verificationMethods.mapNotNull { verificationMethod ->
+            when {
+                verificationMethod.publicKeyJwk != null -> {
+                    extractPublicKeyFromJwk(verificationMethod.publicKeyJwk)
+                }
+
+                verificationMethod.publicKeyMultibase != null -> {
+                    extractPublicKeyFromMultibase(
+                        verificationMethod.publicKeyMultibase,
+                        verificationMethod.type
+                    )
+                }
+
+                else -> null
+            }
+        }
+    }
+
+    private fun extractPublicKeyFromJwk(jwk: Map<String, String>): PublicKey? {
+        if (jwk.containsKey("x") && jwk.containsKey("crv")) {
+            val x = jwk["x"]
+            val crv = jwk["crv"]
+            return when (DIDDocument.VerificationMethod.getCurveByType(crv!!)) {
+                Curve.SECP256K1 -> {
+                    if (jwk.containsKey("y")) {
+                        val y = jwk["y"]
+                        val kmmSecp = KMMECSecp256k1PublicKey.secp256k1FromByteCoordinates(
+                            x!!.base64UrlDecodedBytes,
+                            y!!.base64UrlDecodedBytes
+                        )
+                        Secp256k1PublicKey(kmmSecp.raw)
+                    } else {
+                        Secp256k1PublicKey(x!!.base64UrlDecodedBytes)
+                    }
+                }
+
+                Curve.ED25519 -> {
+                    Ed25519PublicKey(x!!.base64UrlDecodedBytes)
+                }
+
+                Curve.X25519 -> {
+                    X25519PublicKey(x!!.base64UrlDecodedBytes)
+                }
+            }
+        }
+        return null
+    }
+
+    private fun extractPublicKeyFromMultibase(publicKey: String, type: String): PublicKey {
+        return when (DIDDocument.VerificationMethod.getCurveByType(type)) {
+            Curve.SECP256K1 -> {
+                Secp256k1PublicKey(Multibase.decode(publicKey))
+            }
+
+            Curve.ED25519 -> {
+                Ed25519PublicKey(Multibase.decode(publicKey))
+            }
+
+            Curve.X25519 -> {
+                X25519PublicKey(Multibase.decode(publicKey))
+            }
+        }
+    }
+
     /**
      * Method to get the kId from the DID authentication property, Master key.
      *
@@ -1336,6 +1549,6 @@ open class PolluxImpl(
                 verificationMethod.id.did == did && verificationMethod.id.fragment == PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.defaultId()
             }
 
-        return verificationMethod?.id?.fragment
+        return verificationMethod?.id?.string()
     }
 }

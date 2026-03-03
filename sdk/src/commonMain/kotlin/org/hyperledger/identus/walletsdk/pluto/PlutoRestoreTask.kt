@@ -2,7 +2,8 @@
 
 package org.hyperledger.identus.walletsdk.pluto
 
-import java.util.*
+import io.ipfs.multibase.Multibase
+import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -25,6 +26,7 @@ import org.hyperledger.identus.apollo.base64.base64UrlDecoded
 import org.hyperledger.identus.apollo.base64.base64UrlDecodedBytes
 import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PrivateKey
 import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PrivateKey
+import org.hyperledger.identus.walletsdk.apollo.utils.Secp256k1PublicKey
 import org.hyperledger.identus.walletsdk.apollo.utils.X25519PrivateKey
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Castor
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Pluto
@@ -44,6 +46,8 @@ import org.hyperledger.identus.walletsdk.pluto.PlutoRestoreTask.BackUpMessage.Js
 import org.hyperledger.identus.walletsdk.pluto.models.backup.BackupV0_0_1
 import org.hyperledger.identus.walletsdk.pollux.models.AnonCredential
 import org.hyperledger.identus.walletsdk.pollux.models.JWTCredential
+import org.hyperledger.identus.walletsdk.pollux.models.SDJWTCredential
+import org.hyperledger.identus.walletsdk.pollux.models.W3CCredential
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -94,6 +98,16 @@ open class PlutoRestoreTask(
                         .replace("\"null\"", "null")
                     Json.decodeFromString<AnonCredentialBackUp>(json)
                         .toAnonCredential().toStorableCredential()
+                }
+
+                BackUpRestorationId.W3C.value -> {
+                    val json = it.data.base64UrlDecoded
+                    Json.decodeFromString<W3CCredential>(json).toStorableCredential()
+                }
+
+                BackUpRestorationId.SDJWT.value -> {
+                    val sdjwtString = it.data.base64UrlDecoded
+                    SDJWTCredential.fromSDJwtString(sdjwtString).toStorableCredential()
                 }
 
                 else -> {
@@ -174,10 +188,12 @@ open class PlutoRestoreTask(
                 }
             }
 
-            Triple(key, restorationId, it.did?.toDID())
+            val didFromBackup = it.did?.toDID()
+            Triple(key, restorationId, didFromBackup)
         }.forEach {
             if (it.third is DID) {
-                if (it.third.toString().contains("peer")) {
+                val didString = it.third.toString()
+                if (didString.contains("peer")) {
                     val did = (it.third as DID)
                     val keyId = did.toString()
                     if (keyId.contains("#")) {
@@ -196,12 +212,20 @@ open class PlutoRestoreTask(
                         }
                     }
                 } else {
+                    // For Prism DIDs, we need to:
+                    // 1. Store the DID first (handles duplicates via INSERT OR IGNORE)
+                    // 2. Resolve the DID document to find verification method IDs
+                    // 3. Match each key to its verification method by public key
+                    // 4. Store the key with the verification method ID as metaId
                     pluto.storePrismDIDAndPrivateKeys(
                         it.third as DID,
                         (it.first.keySpecification[IndexKey().property])?.toInt(),
                         null,
-                        listOf(it.first as StorableKey)
+                        emptyList()
                     )
+                    runBlocking {
+                        resolvePrismDIDForPrivateKey(it.third as DID, it.first)
+                    }
                 }
             } else {
                 pluto.storePrivate(it.first as StorableKey, it.second)
@@ -236,6 +260,99 @@ open class PlutoRestoreTask(
                 )
             }
         }
+    }
+
+    /**
+     * Resolves a Prism DID document and matches the private key to the correct verification method
+     * by comparing public keys. Stores the key with the verification method ID as metaId.
+     */
+    private suspend fun resolvePrismDIDForPrivateKey(did: DID, privateKey: PrivateKey) {
+        val document = try {
+            castor.resolveDID(did.toString())
+        } catch (e: Exception) {
+            null
+        }
+
+        // If DID resolution fails, store the key without verification method matching
+        if (document == null) {
+            pluto.storePrivateKeys(
+                privateKey as StorableKey,
+                did,
+                (privateKey.keySpecification[IndexKey().property])?.toInt(),
+                null
+            )
+            return
+        }
+
+        val listOfVerificationMethods: MutableList<DIDDocument.VerificationMethod> =
+            mutableListOf()
+
+        // Collect all verification methods from authentication and other sections
+        document.coreProperties.forEach {
+            if (it is DIDDocument.Authentication) {
+                listOfVerificationMethods.addAll(it.verificationMethods)
+            }
+            if (it is DIDDocument.AssertionMethod) {
+                listOfVerificationMethods.addAll(it.verificationMethods)
+            }
+        }
+
+        // Find the matching verification method by comparing public keys
+        if (privateKey is Secp256k1PrivateKey) {
+            val secp256k1PublicKey = privateKey.publicKey() as Secp256k1PublicKey
+            val privateKeyJwk = secp256k1PublicKey.getJwk()
+            val privateKeyRawBytes = secp256k1PublicKey.raw
+
+            for (verificationMethod in listOfVerificationMethods) {
+                val vmPublicKeyJwk = verificationMethod.publicKeyJwk
+                val vmPublicKeyMultibase = verificationMethod.publicKeyMultibase
+
+                // Try to match using JWK first
+                if (vmPublicKeyJwk != null) {
+                    val vmX = vmPublicKeyJwk["x"]
+                    val vmY = vmPublicKeyJwk["y"]
+                    // Compare the x and y coordinates of the public keys
+                    if (vmX == privateKeyJwk.x && vmY == privateKeyJwk.y) {
+                        pluto.storePrivateKeys(
+                            privateKey as StorableKey,
+                            did,
+                            (privateKey.keySpecification[IndexKey().property])?.toInt(),
+                            verificationMethod.id.string()
+                        )
+                        return
+                    }
+                }
+
+                // Try to match using multibase-encoded public key
+                if (vmPublicKeyMultibase != null) {
+                    try {
+                        val decodedPublicKeyBytes = Multibase.decode(vmPublicKeyMultibase)
+                        // Compare raw bytes of public keys
+                        if (privateKeyRawBytes.contentEquals(decodedPublicKeyBytes)) {
+                            pluto.storePrivateKeys(
+                                privateKey as StorableKey,
+                                did,
+                                (privateKey.keySpecification[IndexKey().property])?.toInt(),
+                                verificationMethod.id.string()
+                            )
+                            return
+                        }
+                    } catch (e: Exception) {
+                        // Ignore multibase decoding errors
+                    }
+                }
+            }
+        }
+
+        // If no matching verification method found, store with a UUID as fallback
+        // This ensures the key is still stored even if matching fails
+        val fallbackId = UUID.randomUUID().toString()
+        pluto.storePrivateKeys(
+            privateKey as StorableKey,
+            did,
+            (privateKey.keySpecification[IndexKey().property])?.toInt(),
+            fallbackId
+        )
     }
 
     /**
@@ -336,7 +453,8 @@ open class PlutoRestoreTask(
     enum class BackUpRestorationId(val value: String) {
         JWT("jwt"),
         ANONCRED("anoncred"),
-        W3C("w3c");
+        W3C("w3c"),
+        SDJWT("sdjwt");
 
         /**
          * Converts a BackUpRestorationId object to a RestorationID object from the RestorationID class.
@@ -348,6 +466,7 @@ open class PlutoRestoreTask(
                 JWT -> RestorationID.JWT
                 ANONCRED -> RestorationID.ANONCRED
                 W3C -> RestorationID.W3C
+                SDJWT -> RestorationID.SDJWT
             }
     }
 
@@ -388,7 +507,10 @@ open class PlutoRestoreTask(
         @SerialName("witness")
         @JsonNames("witness", "witnessJson")
         val witnessJson: Witness? = null,
-        val revoked: Boolean? = null
+        val revoked: Boolean? = null,
+        @SerialName("original_json")
+        @JsonNames("original_json", "originalJson")
+        val originalJson: String? = null
     ) {
         /**
          * Converts the object to an instance of AnonCredential.
@@ -396,6 +518,8 @@ open class PlutoRestoreTask(
          * @return An instance of AnonCredential.
          */
         fun toAnonCredential(): AnonCredential {
+            // Use originalJson if available (preserved from backup), otherwise generate from this object
+            val credentialJson = originalJson ?: Json.encodeToString(this)
             val credential = AnonCredential(
                 schemaID = schemaID,
                 credentialDefinitionID = credentialDefinitionID,
@@ -405,7 +529,7 @@ open class PlutoRestoreTask(
                 revocationRegistryId = revocationRegistryId,
                 revocationRegistryJson = Json.encodeToString(revocationRegistry),
                 witnessJson = Json.encodeToString(witnessJson),
-                Json.encodeToString(this)
+                credentialJson
             )
             credential.revoked = this.revoked
             return credential

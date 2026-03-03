@@ -183,7 +183,7 @@ data class ProposeCredential @JvmOverloads constructor(
  * @return A new ProposeCredential object.
  */
 @JvmOverloads
-inline fun <reified T : Serializable> ProposeCredential.Companion.build(
+inline fun <reified T> ProposeCredential.Companion.build(
     fromDID: DID,
     toDID: DID,
     thid: String?,

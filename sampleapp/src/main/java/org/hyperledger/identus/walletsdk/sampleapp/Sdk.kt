@@ -5,12 +5,11 @@ package org.hyperledger.identus.walletsdk.sampleapp
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import app.cash.sqldelight.db.SqlDriver
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import org.hyperledger.identus.walletsdk.SdkPlutoDb
 import org.hyperledger.identus.walletsdk.apollo.ApolloImpl
 import org.hyperledger.identus.walletsdk.castor.CastorImpl
 import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
@@ -29,7 +28,6 @@ import org.hyperledger.identus.walletsdk.edgeagent.mediation.MediationHandler
 import org.hyperledger.identus.walletsdk.mercury.MercuryImpl
 import org.hyperledger.identus.walletsdk.mercury.resolvers.DIDCommWrapper
 import org.hyperledger.identus.walletsdk.pluto.PlutoImpl
-import org.hyperledger.identus.walletsdk.pluto.data.DbConnection
 import org.hyperledger.identus.walletsdk.pluto.data.DbConnectionImpl
 import org.hyperledger.identus.walletsdk.pollux.PolluxImpl
 import java.net.UnknownHostException
@@ -41,6 +39,11 @@ class Sdk {
     private var pollux: Pollux = createPollux()
     private val seed: Seed = createSeed()
     private val agentStatusStream: MutableLiveData<EdgeAgent.State> = MutableLiveData()
+    private val agentScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, _ ->
+            agentStatusStream.postValue(EdgeAgent.State.STOPPED)
+        }
+    )
 
     val pluto: Pluto = createPluto()
     val mercury: Mercury = createMercury()
@@ -53,7 +56,7 @@ class Sdk {
         handler = createHandler(mediatorDID)
         agent = createAgent(handler)
 
-        CoroutineScope(Dispatchers.Default).launch {
+        agentScope.launch {
             agent.flowState.collect {
                 agentStatusStream.postValue(it)
             }
@@ -61,7 +64,7 @@ class Sdk {
 
         try {
             (pluto as PlutoImpl).start(context)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Ignore if already running
             if (e.javaClass.name != "org.hyperledger.identus.walletsdk.domain.models.PlutoError\$DatabaseServiceAlreadyRunning") {
                 throw e
@@ -79,12 +82,18 @@ class Sdk {
         handler = createHandler("did:prism:asldkfjalsdf")
         agent = createAgent(handler)
 
-        CoroutineScope(Dispatchers.Default).launch {
+        agentScope.launch {
             agent.flowState.collect {
                 agentStatusStream.postValue(it)
             }
         }
-        startPluto(context)
+        try {
+            startPluto(context)
+        } catch (e: Throwable) {
+            if (e.javaClass.name != "org.hyperledger.identus.walletsdk.domain.models.PlutoError\$DatabaseServiceAlreadyRunning") {
+                throw e
+            }
+        }
         agentStatusStream.postValue(EdgeAgent.State.RUNNING)
     }
 
@@ -104,16 +113,6 @@ class Sdk {
     }
 
     private fun createPluto(): Pluto {
-        val customDbConnection = object : DbConnection {
-            override var driver: SqlDriver? = null
-
-            override suspend fun connectDb(context: Any?): SqlDriver {
-                val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-                SdkPlutoDb.Schema.create(driver)
-                this.driver = driver
-                return driver
-            }
-        }
         return PlutoImpl(DbConnectionImpl())
     }
 
@@ -136,32 +135,32 @@ class Sdk {
     }
 
     private fun createSeed(): Seed {
-        val words = arrayOf(
-            "trumpet",
-            "mass",
-            "anger",
-            "eyebrow",
-            "gadget",
-            "sword",
-            "debate",
-            "spend",
-            "move",
-            "noble",
-            "motor",
-            "common",
-            "junk",
-            "feed",
-            "alone",
-            "whip",
-            "feed",
-            "front",
-            "radio",
-            "rookie",
-            "settle",
-            "provide",
-            "admit",
-            "peanut"
-        )
+//        val words = arrayOf(
+//            "trumpet",
+//            "mass",
+//            "anger",
+//            "eyebrow",
+//            "gadget",
+//            "sword",
+//            "debate",
+//            "spend",
+//            "move",
+//            "noble",
+//            "motor",
+//            "common",
+//            "junk",
+//            "feed",
+//            "alone",
+//            "whip",
+//            "feed",
+//            "front",
+//            "radio",
+//            "rookie",
+//            "settle",
+//            "provide",
+//            "admit",
+//            "peanut"
+//        )
 //        return apollo.createSeed(words, "")
         return Seed(
             Base64.getUrlDecoder()

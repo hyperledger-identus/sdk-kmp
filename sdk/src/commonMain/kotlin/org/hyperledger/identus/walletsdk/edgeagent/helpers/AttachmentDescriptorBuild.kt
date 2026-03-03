@@ -3,7 +3,6 @@
 package org.hyperledger.identus.walletsdk.edgeagent.helpers
 
 import io.ktor.http.ContentType
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.hyperledger.identus.apollo.base64.base64UrlEncoded
@@ -15,12 +14,12 @@ import java.util.UUID
  * Builds an AttachmentDescriptor object with the specified parameters.
  *
  * @param id The unique identifier for the attachment. If not provided, a random UUID will be generated.
- * @param payload The payload data for the attachment.
+ * @param payload The payload data for the attachment (must be annotated with @Serializable).
  * @param mediaType The media type of the attachment. If not provided, the default media type will be used.
  * @return The built AttachmentDescriptor object.
  */
 @JvmOverloads
-inline fun <reified T : Serializable> AttachmentDescriptor.Companion.build(
+inline fun <reified T> AttachmentDescriptor.Companion.build(
     id: String = UUID.randomUUID().toString(),
     payload: T,
     mediaType: String? = ContentType.Application.Json.toString()

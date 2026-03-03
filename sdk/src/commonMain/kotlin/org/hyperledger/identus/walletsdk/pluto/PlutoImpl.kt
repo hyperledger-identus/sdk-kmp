@@ -1196,7 +1196,7 @@ class PlutoImpl(
                 val jwk = storableKeyToJWK(keyDIDRecord.restorationIdentifier, keyDIDRecord.data_)
                 BackupV0_0_1.Key(
                     key = Json.encodeToString(jwk),
-                    did = keyDIDRecord.id,
+                    did = keyDIDRecord.didId,
                     index = keyDIDRecord.keyPathIndex,
                     recoveryId = keyDIDRecord.restorationIdentifier
                 )

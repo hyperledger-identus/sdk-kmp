@@ -92,12 +92,12 @@ class CredentialsAdapter(
                 }
 
                 SDJWTCredential::class -> {
-                    val sdjwt = cred as SDJWTCredential
+                    // val sdjwt = cred as SDJWTCredential
                     type.text = String.format(typeString, "SDJWT")
                 }
 
                 W3CCredential::class -> {
-                    val w3c = cred as W3CCredential
+                    // val w3c = cred as W3CCredential
                     type.text = String.format(typeString, "W3C")
                 }
 

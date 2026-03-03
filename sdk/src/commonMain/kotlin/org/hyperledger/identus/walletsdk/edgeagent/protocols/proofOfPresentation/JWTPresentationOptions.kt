@@ -46,3 +46,35 @@ data class AnoncredsPresentationOptions(
 ) : PresentationOptions {
     override val type: CredentialType = CredentialType.ANONCREDS_PROOF_REQUEST
 }
+
+data class SDJWTPresentationOptions(
+    val name: String? = "Presentation",
+    val purpose: String = "Presentation definition",
+    val sdjwt: Array<String> = arrayOf("EdDSA"),
+    val domain: String = "",
+    val challenge: String = ""
+) : PresentationOptions {
+    override val type: CredentialType = CredentialType.SDJWT
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as SDJWTPresentationOptions
+
+        if (name != other.name) return false
+        if (purpose != other.purpose) return false
+        if (domain != other.domain) return false
+        if (challenge != other.challenge) return false
+        return sdjwt.contentEquals(other.sdjwt)
+    }
+
+    override fun hashCode(): Int {
+        var result = name?.hashCode() ?: 0
+        result = 31 * result + purpose.hashCode()
+        result = 31 * result + (sdjwt.contentHashCode())
+        result = 31 * result + domain.hashCode()
+        result = 31 * result + challenge.hashCode()
+        return result
+    }
+}

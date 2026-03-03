@@ -273,7 +273,7 @@ data class IssueCredential(
  * @return An instance of [IssueCredential] with the specified parameters.
  */
 @JvmOverloads
-inline fun <reified T : Serializable> IssueCredential.Companion.build(
+inline fun <reified T> IssueCredential.Companion.build(
     fromDID: DID,
     toDID: DID,
     thid: String?,

@@ -22,6 +22,7 @@
     <string name="tab_agent">Agent</string>
     <string name="tab_contacts">Contacts</string>
     <string name="tab_messages">Messages</string>
+    <string name="tab_proof_requests">Proofs</string>
     <string name="tab_credentials">Creds</string>
     <string name="tab_dids">DIDs</string>
     <string name="credential_type">Type: %1$s</string>

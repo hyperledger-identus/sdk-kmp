@@ -4,11 +4,11 @@ import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.BeforeAll
 import io.cucumber.java.ParameterType
-import org.hyperledger.identus.walletsdk.abilities.UseWalletSdk
 import net.serenitybdd.screenplay.Actor
 import net.serenitybdd.screenplay.actors.Cast
 import net.serenitybdd.screenplay.actors.OnStage
 import net.serenitybdd.screenplay.rest.abilities.CallAnApi
+import org.hyperledger.identus.walletsdk.abilities.UseWalletSdk
 
 // https://cucumber.io/docs/cucumber/api/?lang=kotlin
 @BeforeAll
@@ -26,18 +26,21 @@ class HooksSetup {
     fun setStage() {
         val cast = Cast()
 
-        cast.actorNamed("Edge Agent",
-            CallAnApi.at(Environment.mediatorOobUrl),
+        cast.actorNamed(
+            "Edge Agent",
+            CallAnApi.at(Environment.mediator.url),
             UseWalletSdk()
         )
 
-        cast.actorNamed("Verifier Edge Agent",
-            CallAnApi.at(Environment.mediatorOobUrl),
+        cast.actorNamed(
+            "Verifier Edge Agent",
+            CallAnApi.at(Environment.mediator.url),
             UseWalletSdk()
         )
 
-        cast.actorNamed("Cloud Agent",
-            CallAnApi.at(Environment.agentUrl)
+        cast.actorNamed(
+            "Cloud Agent",
+            CallAnApi.at(Environment.agent.url)
         )
 
         OnStage.setTheStage(cast)

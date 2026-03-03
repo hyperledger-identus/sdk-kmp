@@ -135,13 +135,17 @@ sealed class EdgeAgentError : KnownPrismError() {
             get() = "$type not supported, must be one of the following: ${supportedTypes.joinToString(", ")}"
     }
 
-    class CredentialNotValidForPresentationRequest() :
+    class CredentialNotValidForPresentationRequest(private val reason: String? = null) :
         EdgeAgentError() {
         override val code: Int
             get() = 614
 
         override val message: String
-            get() = "This credential does not fulfill the criteria required by the request."
+            get() = if (reason != null) {
+                "This credential does not fulfill the criteria required by the request: $reason"
+            } else {
+                "This credential does not fulfill the criteria required by the request."
+            }
     }
 
     class ExpiredInvitation() :

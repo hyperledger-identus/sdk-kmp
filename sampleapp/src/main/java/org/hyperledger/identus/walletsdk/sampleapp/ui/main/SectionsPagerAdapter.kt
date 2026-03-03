@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
 import org.hyperledger.identus.walletsdk.sampleapp.R
+import org.hyperledger.identus.walletsdk.sampleapp.ui.proofrequests.ProofRequestsFragment
 import org.hyperledger.identus.walletsdk.ui.contacts.ContactsFragment
 import org.hyperledger.identus.walletsdk.ui.credentials.CredentialsFragment
 import org.hyperledger.identus.walletsdk.ui.dids.DIDsFragment
@@ -14,6 +15,7 @@ private val TAB_TITLES = arrayOf(
     R.string.tab_contacts,
     R.string.tab_dids,
     R.string.tab_messages,
+    R.string.tab_proof_requests,
     R.string.tab_credentials
 )
 
@@ -36,6 +38,9 @@ class SectionsPagerAdapter(private val context: Context, fm: FragmentManager) :
                 MessagesFragment.newInstance()
             }
             3 -> {
+                ProofRequestsFragment.newInstance()
+            }
+            4 -> {
                 CredentialsFragment.newInstance()
             }
             else -> {

@@ -2,6 +2,8 @@ package org.hyperledger.identus.walletsdk.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 object DatabaseClient {
     @Volatile
@@ -15,9 +17,22 @@ object DatabaseClient {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "database-name"
-                    ).build()
+                    ).addMigrations(MIGRATION_1_2).build()
                 }
             }
+        }
+    }
+
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS `pending_proof_request` (" +
+                    "`messageId` TEXT NOT NULL, " +
+                    "`thid` TEXT, " +
+                    "`createdAt` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`messageId`)" +
+                    ")"
+            )
         }
     }
 

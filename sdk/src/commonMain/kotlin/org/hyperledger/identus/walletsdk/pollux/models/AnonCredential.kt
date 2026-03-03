@@ -90,7 +90,9 @@ data class AnonCredential(
             revocationRegistryId = this.revocationRegistryId,
             revocationRegistry = if (this.revocationRegistryJson != null) Json.decodeFromString(this.revocationRegistryJson) else RevocationRegistry(),
             witnessJson = if (this.witnessJson != null) Json.decodeFromString(this.witnessJson) else PlutoRestoreTask.AnonCredentialBackUp.Witness(),
-            revoked = this.revoked
+            revoked = this.revoked,
+            // Preserve the original JSON (which is also the credential ID)
+            originalJson = this.json
         )
     }
 

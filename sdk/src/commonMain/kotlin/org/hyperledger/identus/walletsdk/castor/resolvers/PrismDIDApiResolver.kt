@@ -26,7 +26,8 @@ import org.hyperledger.identus.walletsdk.domain.models.httpClient
 
 class PrismDIDApiResolver(
     private val apollo: Apollo,
-    private val cloudAgentUrl: String,
+    private val resolverBaseUrl: String,
+    private val didEndpointPath: String = "dids",
     private val api: Api? = ApiImpl(
         httpClient {
             install(ContentNegotiation) {
@@ -42,11 +43,18 @@ class PrismDIDApiResolver(
     )
 ) : DIDResolver {
     override val method: String = PRISM
+    private val normalizedBaseUrl = resolverBaseUrl.trimEnd('/')
+    private val normalizedEndpointPath = didEndpointPath.trim('/')
 
     override suspend fun resolve(didString: String): DIDDocument {
+        val endpoint = if (normalizedBaseUrl.isBlank()) {
+            "/$normalizedEndpointPath/$didString"
+        } else {
+            "$normalizedBaseUrl/$normalizedEndpointPath/$didString"
+        }
         val response = api!!.request(
             HttpMethod.Get.value,
-            "${this.cloudAgentUrl}/dids/$didString",
+            endpoint,
             emptyArray(),
             arrayOf(
                 KeyValue(HttpHeaders.ContentType, Typ.Encrypted.typ),
@@ -179,6 +187,7 @@ private fun getVerificationMethods(jsonObject: JsonObject): Array<DIDDocument.Ve
                 }
                 jwkMap
             }
+            val publicKeyMultibase = verificationMethod["publicKeyMultibase"]?.jsonPrimitive?.content
             val didId =
                 verificationMethod["id"]?.jsonPrimitive?.content ?: throw CastorError.NullOrMissingRequiredField(
                     "id",
@@ -193,7 +202,7 @@ private fun getVerificationMethods(jsonObject: JsonObject): Array<DIDDocument.Ve
                 controller = DID(controller),
                 type = type,
                 publicKeyJwk = publicKeyJwk,
-                publicKeyMultibase = null
+                publicKeyMultibase = publicKeyMultibase
             )
             verificationMethods.add(method)
         }

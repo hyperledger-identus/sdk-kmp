@@ -66,6 +66,13 @@ jobs:
       - name: Build for JS, Android, JVM
         run: ./gradlew build allTests koverXmlReportRelease koverHtmlReportRelease --stacktrace
 
+      - name: Coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+        with:
+          file: "sdk/build/reports/android/result.xml"
+
       - name: Publish test results
         if: always()
         uses: EnricoMi/publish-unit-test-result-action/composite@v2
