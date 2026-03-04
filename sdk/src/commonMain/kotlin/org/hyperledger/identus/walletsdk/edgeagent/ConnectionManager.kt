@@ -1,8 +1,11 @@
 package org.hyperledger.identus.walletsdk.edgeagent
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -113,11 +116,15 @@ class ConnectionManagerImpl(
                 // Fallback mechanism if no WebSocket service endpoint is available
                 if (serviceEndpoint == null) {
                     while (this.isActive) {
-                        // Continuously await and process new messages
-                        awaitMessages().collect { array ->
-                            processMessages(array)
+                        try {
+                            awaitMessages().collect { array ->
+                                processMessages(array)
+                            }
+                        } catch (_: CancellationException) {
+                            break
+                        } catch (e: Exception) {
+                            logger.error("Error fetching messages: ${e.message}")
                         }
-                        // Wait for the specified request interval before fetching new messages
                         delay(Duration.ofSeconds(requestInterval.toLong()).toMillis())
                     }
                 }
@@ -131,8 +138,17 @@ class ConnectionManagerImpl(
         }
     }
 
-    override fun stopConnection() {
-        fetchingMessagesJob?.cancel()
+    override suspend fun stopConnection() {
+        val childCount = scope.coroutineContext[Job]?.children?.count() ?: 0
+
+        fetchingMessagesJob?.cancelAndJoin()
+        fetchingMessagesJob = null
+
+        val remaining = scope.coroutineContext[Job]?.children?.count() ?: 0
+        if (remaining > 0) {
+            scope.coroutineContext[Job]?.cancelChildren()
+            scope.coroutineContext[Job]?.children?.forEach { it.join() }
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ import io.ktor.client.request.request
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpMethod
 import io.ktor.http.Url
+import kotlinx.coroutines.CancellationException
 import org.hyperledger.identus.walletsdk.edgeagent.shared.PrismShared
 
 /**
@@ -42,6 +43,8 @@ open class ApiImpl(override var client: HttpClient) : Api {
                 status = response.status.value,
                 jsonString = response.bodyAsText()
             )
+        } catch (ex: CancellationException) {
+            throw ex
         } catch (ex: Exception) {
             return HttpResponse(
                 status = 500,

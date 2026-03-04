@@ -354,12 +354,13 @@ open class EdgeAgent {
      * All ongoing events that was created by the [EdgeAgent] are stopped.
      * After all the events are stopped the state of the [EdgeAgent] is set to [State.STOPPED].
      */
-    fun stop() {
+    suspend fun stop() {
         if (state != State.RUNNING) {
             return
         }
-        logger.info(message = "Stoping agent")
+        logger.info(message = "Stopping agent")
         state = State.STOPPING
+        connectionManager.stopConnection()
         state = State.STOPPED
         logger.info(message = "Agent not running")
     }
@@ -603,7 +604,7 @@ open class EdgeAgent {
         connectionManager.mediationHandler.updateKeyListWithDIDs(arrayOf(did))
     }
 
-    fun setupMediatorHandler(mediatorHandler: MediationHandler) {
+    suspend fun setupMediatorHandler(mediatorHandler: MediationHandler) {
         stop()
         this.connectionManager =
             ConnectionManagerImpl(
@@ -622,7 +623,7 @@ open class EdgeAgent {
      *
      * @param did The DID of the mediator to set up.
      */
-    fun setupMediatorDID(did: DID) {
+    suspend fun setupMediatorDID(did: DID) {
         val tmpMediatorHandler = BasicMediatorHandler(
             mediatorDID = did,
             mercury = mercury,
@@ -896,7 +897,7 @@ open class EdgeAgent {
     /**
      * Stop fetching messages
      */
-    fun stopFetchingMessages() {
+    suspend fun stopFetchingMessages() {
         logger.info(message = "Stop streaming new unread messages")
         connectionManager.stopConnection()
     }
@@ -1775,7 +1776,7 @@ open class EdgeAgent {
             to = did
         )
 
-//        pluto.storeMessage(requestPresentation.makeMessage())
+        pluto.storeMessage(requestPresentation.makeMessage())
         return ConnectionlessRequestPresentation(
             requestPresentation = requestPresentation
         )

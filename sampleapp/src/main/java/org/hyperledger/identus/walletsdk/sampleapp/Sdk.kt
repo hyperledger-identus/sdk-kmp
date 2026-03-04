@@ -101,11 +101,8 @@ class Sdk {
         (pluto as PlutoImpl).start(context)
     }
 
-    fun stopAgent() {
-        agent.let {
-            it.stopFetchingMessages()
-            it.stop()
-        }
+    suspend fun stopAgent() {
+        agent.stop()
     }
 
     fun agentStatusStream(): LiveData<EdgeAgent.State> {

@@ -244,7 +244,7 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
                                                     // AnonCreds: use default DID
                                                     agent.createNewPrismDID()
                                                 }
-                                                format.contains("sdjwt", ignoreCase = true) -> {
+                                                format.contains("sd-jwt", ignoreCase = true) -> {
                                                     // SD-JWT: use Ed25519 key
                                                     val authKeyPair = Ed25519KeyPair.generateKeyPair()
                                                     agent.createNewPrismDID(
