@@ -15,6 +15,23 @@ import kotlin.test.assertEquals
 
 class PrismDIDPublicKeyTests {
 
+    @Test
+    fun it_should_return_master_without_index_for_master_key_id() {
+        // Master key ID should be "master" (no index suffix) per spec normalization
+        val masterKeyId = PrismDIDPublicKey.Usage.MASTER_KEY.id(0)
+        assertEquals("master", masterKeyId)
+        // Master key ID should be the same regardless of the index parameter
+        val masterKeyId1 = PrismDIDPublicKey.Usage.MASTER_KEY.id(1)
+        assertEquals("master", masterKeyId1)
+    }
+
+    @Test
+    fun it_should_return_indexed_id_for_other_key_types() {
+        assertEquals("issuing0", PrismDIDPublicKey.Usage.ISSUING_KEY.id(0))
+        assertEquals("issuing1", PrismDIDPublicKey.Usage.ISSUING_KEY.id(1))
+        assertEquals("authentication0", PrismDIDPublicKey.Usage.AUTHENTICATION_KEY.id(0))
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Ignore("PrismDIDPublicKey requires Secp256k1Lib to be an interface in order to mock its result. Once that is done this test can be added back.")
     @Test
@@ -42,7 +59,7 @@ class PrismDIDPublicKeyTests {
             apollo = apollo,
             proto = proto
         )
-        assertEquals(parsedPublicKey.id, "master0")
+        assertEquals(parsedPublicKey.id, "master")
         assertContentEquals(parsedPublicKey.keyData.raw, publicKey.keyData.raw)
         assertEquals(parsedPublicKey.usage, publicKey.usage)
     }
