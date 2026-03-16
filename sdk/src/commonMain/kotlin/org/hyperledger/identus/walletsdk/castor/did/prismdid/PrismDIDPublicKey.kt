@@ -79,8 +79,9 @@ class PrismDIDPublicKey {
         val curve = keyData.getCurve().lowercase()
         return when (curve) {
             Curve.SECP256K1.value.lowercase() -> {
+                // Use compressed representation (33 bytes) for CompressedECKeyData
                 val compressedData = if (keyData is Secp256k1PublicKey) {
-                    keyData.raw
+                    keyData.getEncodedCompressed()
                 } else {
                     throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
                 }
@@ -176,7 +177,7 @@ fun KeyUsage.fromProto(): PrismDIDPublicKey.Usage {
 fun Secp256k1PublicKey.toProto(): CompressedECKeyData {
     return CompressedECKeyData(
         curve = Curve.SECP256K1.value,
-        data = ByteArr(raw)
+        data = ByteArr(getEncodedCompressed())
     )
 }
 
