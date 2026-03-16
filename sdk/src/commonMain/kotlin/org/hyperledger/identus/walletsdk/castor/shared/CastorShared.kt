@@ -96,32 +96,24 @@ internal class CastorShared {
             keys: List<Pair<KeyPurpose, PublicKey>>,
             services: Array<DIDDocument.Service>?
         ): DID {
-            val grouped: Map<KeyPurpose, List<PublicKey>> =
-                keys.groupBy({ it.first }, { it.second })
-            val publicKeysProto = grouped.flatMap { (purpose, pubKeys) ->
-                pubKeys
-                    .mapIndexed { index, pk ->
-                        val usage = purpose.toUsage()
-                        PrismDIDPublicKey(
-                            apollo = apollo,
-                            id = usage.id(index),
-                            usage = usage,
-                            keyData = pk
-                        ).toProto()
-                    }
-            }
+            val masterKeyPair = keys.firstOrNull { it.first == KeyPurpose.MASTER }
+                ?: throw CastorError.InvalidKeyError("Requires exactly one master key")
+            val masterUsage = KeyPurpose.MASTER.toUsage()
+            // CreateDIDOperation only contains the master key with CompressedECKeyData.
+            // All other keys (authentication, issuance), services, and context
+            // must be added via subsequent UpdateDIDOperation.
+            val masterKeyProto = PrismDIDPublicKey(
+                apollo = apollo,
+                id = masterUsage.id(0),
+                usage = masterUsage,
+                keyData = masterKeyPair.second
+            ).toProto()
             val atalaOperation = AtalaOperation(
                 operation = AtalaOperation.Operation.CreateDid(
                     CreateDIDOperation(
                         didData = CreateDIDOperation.DIDCreationData(
-                            publicKeys = publicKeysProto,
-                            services = services?.map {
-                                Service(
-                                    id = it.id,
-                                    type = it.type.first(),
-                                    serviceEndpoint = listOf(it.serviceEndpoint.uri)
-                                )
-                            } ?: emptyList()
+                            publicKeys = listOf(masterKeyProto),
+                            services = emptyList()
                         )
                     )
                 )
