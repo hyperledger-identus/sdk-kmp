@@ -244,6 +244,7 @@ constructor(
                 arrayOf(
                     Metadata.PublicMetadata("statusCode", "${result.status}"),
                     Metadata.PublicMetadata("uri", service.serviceEndpoint.uri),
+                    Metadata.PrivateMetadata("response", result.jsonString),
                     Metadata.PrivateMetadata("body", message)
                 )
             )
@@ -289,6 +290,7 @@ constructor(
                 arrayOf(
                     Metadata.PublicMetadata("statusCode", "${result.status}"),
                     Metadata.PublicMetadata("uri", uri),
+                    Metadata.PrivateMetadata("response", result.jsonString),
                     Metadata.PrivateMetadata("body", message)
                 )
             )

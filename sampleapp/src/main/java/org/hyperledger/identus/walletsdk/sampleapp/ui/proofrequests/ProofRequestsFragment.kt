@@ -80,7 +80,7 @@ class ProofRequestsFragment : Fragment() {
     ): List<Credential> {
         val format = message.attachments.firstOrNull()?.format.orEmpty().lowercase()
         return when {
-            format.contains("sdjwt") -> {
+            format.contains("sd-jwt") -> {
                 credentials.filterIsInstance<SDJWTCredential>()
             }
             format.contains("anoncred") -> {

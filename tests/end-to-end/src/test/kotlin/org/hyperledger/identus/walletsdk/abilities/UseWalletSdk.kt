@@ -236,9 +236,8 @@ class UseWalletSdk : Ability, HasTeardown {
 
     override fun tearDown() {
         if (isInitialized) {
-            context.sdk.stopFetchingMessages()
-            runBlocking { context.sdk.stop() }
             fetchJob?.cancel()
+            runBlocking { context.sdk.stop() }
             isInitialized = false
         }
     }

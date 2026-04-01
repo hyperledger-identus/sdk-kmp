@@ -116,7 +116,7 @@ class ProofRequestsAdapter(
             if (!key.isNullOrBlank()) return key.uppercase()
         }
         return when {
-            format.contains("sdjwt") -> "SDJWT"
+            format.contains("sd-jwt") -> "SDJWT"
             format.contains("anoncred") -> "ANONCREDS"
             format.contains("jwt") -> "JWT"
             else -> "UNKNOWN"

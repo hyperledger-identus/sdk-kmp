@@ -26,6 +26,8 @@ import org.hyperledger.identus.walletsdk.domain.models.ProvableCredential
 import org.hyperledger.identus.walletsdk.domain.models.Seed
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.issueCredential.IssueCredential
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.issueCredential.OfferCredential
+import org.hyperledger.identus.walletsdk.edgeagent.protocols.outOfBand.ConnectionlessCredentialOffer
+import org.hyperledger.identus.walletsdk.edgeagent.protocols.outOfBand.ConnectionlessRequestPresentation
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.outOfBand.OutOfBandInvitation
 import org.hyperledger.identus.walletsdk.edgeagent.protocols.proofOfPresentation.RequestPresentation
 import org.hyperledger.identus.walletsdk.pluto.PlutoBackupTask
@@ -40,15 +42,20 @@ object EdgeAgentWorkflow {
         edgeAgent.attemptsTo(
             UseWalletSdk.execute { sdkContext ->
                 val urlString = edgeAgent.recall<String>("invitation")
-                // Assuming parseInvitation takes a string or URL, matching TS usage
-                val oobInvitation = sdkContext.sdk.parseInvitation(urlString)
-                try {
-                    sdkContext.sdk.acceptOutOfBandInvitation(oobInvitation as OutOfBandInvitation)
-                } catch (e: Exception) {
-                    logger.error("Error connecting to cloud agent: ${e.message}")
-                    val json = GsonBuilder().setPrettyPrinting().create().toJson(oobInvitation)
-                    logger.error("oobInvitation: $json")
-                    throw e
+                val invitation = sdkContext.sdk.parseInvitation(urlString)
+                when (invitation) {
+                    is OutOfBandInvitation -> {
+                        sdkContext.sdk.acceptOutOfBandInvitation(invitation)
+                    }
+                    is ConnectionlessCredentialOffer -> {
+                        logger.info("Received connectionless credential offer, message already stored by SDK")
+                    }
+                    is ConnectionlessRequestPresentation -> {
+                        logger.info("Received connectionless presentation request, message already stored by SDK")
+                    }
+                    else -> {
+                        throw IllegalStateException("Unsupported invitation type: ${invitation::class.simpleName}")
+                    }
                 }
             }
         )
@@ -95,7 +102,7 @@ object EdgeAgentWorkflow {
                         format.contains("anoncred", ignoreCase = true) -> {
                             sdkContext.sdk.createNewPrismDID()
                         }
-                        format.contains("sdjwt", ignoreCase = true) -> {
+                        format.contains("sd-jwt", ignoreCase = true) -> {
                             val authKeyPair = Ed25519KeyPair.generateKeyPair()
                             sdkContext.sdk.createNewPrismDID(
                                 keys = listOf(Pair(KeyPurpose.AUTHENTICATION, authKeyPair.privateKey))
@@ -348,40 +355,6 @@ object EdgeAgentWorkflow {
                     fun normalizePrismDid(did: String): String = did.substringBefore("#")
                     val expectedPrismDidsNormalized = expectedPrismDids.map(::normalizePrismDid)
                     val actualPrismDidsNormalized = actualPrismDids.map(::normalizePrismDid)
-
-                    fun logDiffs(label: String, expected: List<String>, actual: List<String>) {
-                        val missing = expected.filterNot { actual.contains(it) }
-                        val unexpected = actual.filterNot { expected.contains(it) }
-
-                        if (missing.isNotEmpty() || unexpected.isNotEmpty()) {
-                            logger.warn(
-                                buildString {
-                                    append("Backup restore mismatch for ")
-                                    append(label)
-                                    append(" | expected=")
-                                    append(expected.size)
-                                    append(" actual=")
-                                    append(actual.size)
-                                    if (missing.isNotEmpty()) {
-                                        append(" | missing=")
-                                        append(missing.sorted())
-                                    }
-                                    if (unexpected.isNotEmpty()) {
-                                        append(" | unexpected=")
-                                        append(unexpected.sorted())
-                                    }
-                                }
-                            )
-                        } else {
-                            logger.info(
-                                "Backup restore match for $label | size=${expected.size}"
-                            )
-                        }
-                    }
-
-                    logDiffs("credentials", expectedCredentials, actualCredentials)
-                    logDiffs("peerDids", expectedPeerDids, actualPeerDids)
-                    logDiffs("prismDids", expectedPrismDidsNormalized, actualPrismDidsNormalized)
 
                     assertThat(actualCredentials.size).isEqualTo(expectedCredentials.size)
                     assertThat(actualCredentials.containsAll(expectedCredentials)).isTrue()

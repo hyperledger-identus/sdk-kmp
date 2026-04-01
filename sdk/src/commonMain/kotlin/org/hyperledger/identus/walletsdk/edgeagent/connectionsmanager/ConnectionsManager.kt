@@ -25,5 +25,5 @@ interface ConnectionsManager {
     /**
      * Stops a connection
      */
-    fun stopConnection()
+    suspend fun stopConnection()
 }

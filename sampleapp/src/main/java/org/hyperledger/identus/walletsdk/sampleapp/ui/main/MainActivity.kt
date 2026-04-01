@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -357,6 +358,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Sdk.getInstance().stopAgent()
+        CoroutineScope(Dispatchers.IO).launch {
+            Sdk.getInstance().stopAgent()
+        }
     }
 }
