@@ -1,6 +1,5 @@
 package org.hyperledger.identus.walletsdk.castor.did.prismdid
 
-import org.hyperledger.identus.apollo.base64.base64UrlDecodedBytes
 import org.hyperledger.identus.protos.CompressedECKeyData
 import org.hyperledger.identus.protos.KeyUsage
 import org.hyperledger.identus.walletsdk.apollo.utils.Ed25519PublicKey
@@ -9,8 +8,6 @@ import org.hyperledger.identus.walletsdk.domain.buildingblocks.Apollo
 import org.hyperledger.identus.walletsdk.domain.models.CastorError
 import org.hyperledger.identus.walletsdk.domain.models.Curve
 import org.hyperledger.identus.walletsdk.domain.models.KeyPurpose
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurvePointXKey
-import org.hyperledger.identus.walletsdk.domain.models.keyManagement.CurvePointYKey
 import org.hyperledger.identus.walletsdk.domain.models.keyManagement.PublicKey
 import pbandk.ByteArr
 import kotlin.jvm.Throws
@@ -82,18 +79,19 @@ class PrismDIDPublicKey {
         val curve = keyData.getCurve().lowercase()
         return when (curve) {
             Curve.SECP256K1.value.lowercase() -> {
-                val x = keyData.keySpecification[CurvePointXKey().property]?.base64UrlDecodedBytes
-                    ?: throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
-                val y = keyData.keySpecification[CurvePointYKey().property]?.base64UrlDecodedBytes
-                    ?: throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
+                // Use compressed representation (33 bytes) for CompressedECKeyData
+                val compressedData = if (keyData is Secp256k1PublicKey) {
+                    keyData.getEncodedCompressed()
+                } else {
+                    throw CastorError.InvalidPublicKeyEncoding("prism", "secp256k1")
+                }
                 org.hyperledger.identus.protos.PublicKey(
                     id = id,
                     usage = usage.toProto(),
-                    keyData = org.hyperledger.identus.protos.PublicKey.KeyData.EcKeyData(
-                        org.hyperledger.identus.protos.ECKeyData(
+                    keyData = org.hyperledger.identus.protos.PublicKey.KeyData.CompressedEcKeyData(
+                        CompressedECKeyData(
                             curve = Curve.SECP256K1.value,
-                            x = ByteArr(x),
-                            y = ByteArr(y)
+                            data = ByteArr(compressedData)
                         )
                     )
                 )
@@ -179,7 +177,7 @@ fun KeyUsage.fromProto(): PrismDIDPublicKey.Usage {
 fun Secp256k1PublicKey.toProto(): CompressedECKeyData {
     return CompressedECKeyData(
         curve = Curve.SECP256K1.value,
-        data = ByteArr(raw)
+        data = ByteArr(getEncodedCompressed())
     )
 }
 
@@ -191,7 +189,7 @@ fun Secp256k1PublicKey.toProto(): CompressedECKeyData {
  */
 fun PrismDIDPublicKey.Usage.id(index: Int): String {
     return when (this) {
-        PrismDIDPublicKey.Usage.MASTER_KEY -> "master$index"
+        PrismDIDPublicKey.Usage.MASTER_KEY -> "master"
         PrismDIDPublicKey.Usage.ISSUING_KEY -> "issuing$index"
         PrismDIDPublicKey.Usage.AUTHENTICATION_KEY -> "authentication$index"
         PrismDIDPublicKey.Usage.REVOCATION_KEY -> "revocation$index"
