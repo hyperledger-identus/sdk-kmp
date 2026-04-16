@@ -1,0 +1,8 @@
+ignores:
+  - ".claude/**"
+  - "node_modules/**"
+  - "**/node_modules/**"
+  - "build/**"
+  - "**/build/**"
+  - "CHANGELOG.md"
+  - "megalinter-reports/**"
