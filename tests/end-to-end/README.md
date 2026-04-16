@@ -36,6 +36,7 @@ Tagged scenario
 ### Using IntelliJ Integration
 
 #### Run via JUnit runner
+
 Use the Serenity JUnit runner class in the IntelliJ run configuration:
 
 1. Open `src/test/kotlin/org/hyperledger/identus/walletsdk/TestSuite.kt`.
@@ -43,6 +44,7 @@ Use the Serenity JUnit runner class in the IntelliJ run configuration:
 3. If you created a Cucumber run configuration earlier, update the runner to `CucumberWithSerenity` by pointing it to this `TestSuite` class instead of the default Cucumber runner.
 
 #### Run a single feature from IntelliJ
+
 To run a feature file directly, configure the Cucumber run configuration to use the Serenity main class:
 
 1. Right-click a feature file and select **Run...**, then **Edit Configuration**.

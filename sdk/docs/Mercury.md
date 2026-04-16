@@ -22,4 +22,4 @@ need to get the job done, whether you are building a messaging app, a decentrali
 application that requires secure and private communications.
 
 Mercury also provides a range of advanced features, including support for message threading, priority levels, and
-message expiration and support for a range of transport protocols, including HTTP. 
+message expiration and support for a range of transport protocols, including HTTP.
