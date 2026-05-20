@@ -54,6 +54,39 @@ allprojects {
     }
 }
 
+tasks.register<Exec>("lintText") {
+    group = "verification"
+    description = "Lint text files (markdown, YAML, editorconfig)"
+    commandLine(
+        "bash",
+        "-c",
+        """
+        EXIT_CODE=0
+        echo "=== Markdown Lint ==="
+        npx --yes markdownlint-cli2 '**/*.md' || EXIT_CODE=${'$'}?
+        echo ""
+        echo "=== YAML Lint ==="
+        npx --yes yamllint-ts -c .yamllint.yml ${'$'}(find . \( -name '*.yml' -o -name '*.yaml' \) -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/build/*') || EXIT_CODE=${'$'}?
+        echo ""
+        echo "=== EditorConfig Check ==="
+        npx --yes editorconfig-checker -exclude '\.git|node_modules|build|megalinter' || EXIT_CODE=${'$'}?
+        exit ${'$'}EXIT_CODE
+        """.trimIndent(),
+    )
+}
+
+tasks.register<Exec>("lintTextFix") {
+    group = "verification"
+    description = "Auto-fix markdown formatting issues"
+    commandLine(
+        "npx",
+        "--yes",
+        "markdownlint-cli2",
+        "**/*.md",
+        "--fix",
+    )
+}
+
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
