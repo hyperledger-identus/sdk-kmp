@@ -49,9 +49,9 @@ Edge Agent SDK KMP provides the following building blocks to create, manage and 
 
 To get started with the Edge Agent SDK KMP, you can set up the SDK and start a new project or integrate it into an existing project. Before you start, make sure you have the following installed on your development machine:
 
-- Android: API level 21 and above.
-- Kotlin 1.9.24 or later.
-- JVM: 17 or later.
+* Android: API level 21 and above.
+* Kotlin 1.9.24 or later.
+* JVM: 17 or later.
 
 ### Integrating the SDK in an existing project
 
@@ -62,5 +62,3 @@ implementation("org.hyperledger.identus.sdk:<latest version>")
 ```
 
 <!-- TAG_PLATFORMS -->
-[badge-platform-android]: http://img.shields.io/badge/-android-6EDB8D.svg?style=flat
-[badge-platform-jvm]: http://img.shields.io/badge/-jvm-DB413D.svg?style=flat

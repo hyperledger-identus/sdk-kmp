@@ -1,5 +1,7 @@
 # Connectionless presentation request
+
 ## Requirements
+
 1. A working Identus Mediator and an Identus Cloud Agent.
 2. A holder who already has a JWT Credential issued
 
@@ -9,6 +11,7 @@
 > establish a connection as a holder and, issue a jwt credential.
 
 ## Flow
+
 1. The verifier sill need to generate an oob with the presentation request inside:
 
 ```
@@ -48,5 +51,5 @@ The response looks like this:
 }
 ```
 
-2. Holder processes the oob at the connection tab, and it stores the presentation request as a message.
-3. Holder will move now to the messages tab, act upon that request to send a presentation by selecting a credential.
+1. Holder processes the oob at the connection tab, and it stores the presentation request as a message.
+2. Holder will move now to the messages tab, act upon that request to send a presentation by selecting a credential.
