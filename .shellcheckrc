@@ -1,0 +1,3 @@
+# SC2034: Unused variable — false positive for vars used by Gradle wrapper
+# SC3045: POSIX ulimit — in generated gradlew
+disable=SC2034,SC3045

@@ -1,6 +1,28 @@
 root = true
 
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.swift]
+indent_size = 4
+
+[*.{rs,go}]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+# Kotlin / ktlint rules (repo-specific)
 [*.{kt,kts}]
+indent_size = 4
 ij_kotlin_packages_to_use_import_on_demand = unset
 ij_kotlin_name_count_to_use_star_import_for_members = 99
 ij_kotlin_name_count_to_use_star_import = 99
