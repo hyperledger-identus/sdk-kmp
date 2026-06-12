@@ -1,7 +1,7 @@
 [versions]
 kotlin = "1.9.20"
 agp = "8.2.2"
-apollo = "1.8.7"
+apollo = "1.8.8"
 didpeer = "1.1.2"
 kotlincrypto-hash-sha = "0.4.0"
 didcomm = "0.3.2"
