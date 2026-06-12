@@ -36,8 +36,8 @@ allprojects {
             eachDependency {
                 if (requested.group == "org.bouncycastle") {
                     when (requested.name) {
-                        "bcprov-jdk15on", "bcprov-jdk15to18" -> {
-                            useTarget("org.bouncycastle:bcprov-jdk15on:1.68")
+                        "bcprov-jdk15on", "bcprov-jdk15to18", "bcprov-jdk18on" -> {
+                            useTarget("org.bouncycastle:bcprov-jdk18on:1.80")
                         }
                     }
                 } else if (requested.group == "com.nimbusds") {

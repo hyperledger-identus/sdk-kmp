@@ -205,7 +205,7 @@ class ApolloTests {
         val keyPair = Ed25519KeyPair.generateKeyPair()
         val message = "This is a test message"
         val signature = (keyPair.privateKey as Ed25519PrivateKey).sign(message.toByteArray())
-        signature[0] = 1
+        signature[0] = (signature[0].toInt() xor 1).toByte()
         assertFalse((keyPair.publicKey as Ed25519PublicKey).verify(message.toByteArray(), signature))
     }
 

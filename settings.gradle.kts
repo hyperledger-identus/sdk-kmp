@@ -16,15 +16,15 @@ dependencyResolutionManagement {
         maven("https://jitpack.io")
 
         maven {
-            url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
-        }
-
-        maven {
             url = uri("https://maven.pkg.github.com/LF-Decentralized-Trust-labs/aries-uniffi-wrappers")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
             }
+        }
+
+        maven {
+            url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
         }
     }
 }
