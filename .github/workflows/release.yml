@@ -3,6 +3,8 @@ name: Release SDK
 
 env:
   JAVA_VERSION: 17
+  GITHUB_ACTOR: "hyperledger-bot"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   workflow_dispatch:
