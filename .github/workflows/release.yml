@@ -22,12 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.IDENTUS_CI }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "lts/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Install Java ${{ env.JAVA_VERSION }}"
         uses: actions/setup-java@v4
@@ -38,11 +33,14 @@ jobs:
           server-username: ${{ secrets.OSSRH_USERNAME }}
           server-password: ${{ secrets.OSSRH_PASSWORD }}
 
-      - name: Update gradle.properties with new version
+      - name: Verify release version
         run: |
-          sed -i -E 's/^version *= *.*/version = ${{ github.event.inputs.version }}/' gradle.properties
+          grep -Fx "version = ${{ github.event.inputs.version }}" gradle.properties
 
       - name: Build Kotlin Multiplatform Maven Artifacts
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
         run: ./gradlew publishToMavenLocal --no-configuration-cache
 
       - name: Publish JVM & Android to Maven Central
@@ -54,31 +52,11 @@ jobs:
           ORG_GRADLE_PROJECT_autoRelease: true
         run: ./gradlew publishToMavenCentral --no-configuration-cache
 
-      - uses: crazy-max/ghaction-import-gpg@v6
-        id: import-gpg
-        with:
-          gpg_private_key: ${{ secrets.HYP_BOT_GPG_PRIVATE }}
-          passphrase: ${{ secrets.HYP_BOT_GPG_PASSWORD }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_config_global: true
-          git_tag_gpgsign: false
-
-      - name: Commit updated files and tag the release
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_author: "${{ steps.import-gpg.outputs.name }} <${{ steps.import-gpg.outputs.email }}>"
-          commit_user_name: ${{ steps.import-gpg.outputs.name }}
-          commit_user_email: ${{ steps.import-gpg.outputs.email }}
-          commit_options: '-s -S'
-          commit_message: |
-            chore(release): v${{ github.event.inputs.version }}
-          tagging_message: v${{ github.event.inputs.version }}
-          file_pattern: gradle.properties
-
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.event.inputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ github.event.inputs.version }}" \
+            --target "$GITHUB_SHA" \
+            --title "v${{ github.event.inputs.version }}" \
+            --generate-notes
