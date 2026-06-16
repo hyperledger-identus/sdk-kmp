@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.21"
+    kotlin("jvm") version "1.9.25"
     idea
     id("com.github.ben-manes.versions") version "0.47.0"
     id("net.serenity-bdd.serenity-gradle-plugin") version "4.0.1"
