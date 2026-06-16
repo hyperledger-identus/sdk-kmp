@@ -1,13 +1,13 @@
 [versions]
 kotlin = "1.9.20"
 agp = "8.2.2"
-apollo = "1.4.2"
+apollo = "1.8.8"
 didpeer = "1.1.2"
 kotlincrypto-hash-sha = "0.4.0"
 didcomm = "0.3.2"
 anoncreds = "0.2.0-wrapper.1"
 bignum = "0.3.9"
-bouncycastle = "1.68"
+bouncycastle = "1.80"
 sdjwt = "0.4.0"
 jsonld = "1.4.0"
 json = "2.0.1"
@@ -44,13 +44,13 @@ mockito-kotlin = "4.0.0"
 
 [libraries]
 # Dependencies
-dependencies-apollo = { module = "org.hyperledger.identus.apollo:apollo", version.ref = "apollo" }
+dependencies-apollo = { module = "org.hyperledger.identus:apollo", version.ref = "apollo" }
 dependencies-didpeer = { module = "io.iohk.atala.prism.didcomm:didpeer", version.ref = "didpeer" }
 dependencies-kotlincrypto-hash-sha = { module = "org.kotlincrypto.hash:sha2", version.ref = "kotlincrypto-hash-sha" }
 dependencies-didcomm = { module = "org.didcommx:didcomm", version.ref = "didcomm" }
 dependencies-anoncreds = { module = "org.hyperledger:anoncreds_uniffi", version.ref = "anoncreds" }
 dependencies-ionspin-bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "bignum" }
-dependencies-bouncycastle = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
+dependencies-bouncycastle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 dependencies-eudi-sdjwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdjwt" }
 dependencies-json-ld = { module = "com.apicatalog:titanium-json-ld-jre8", version.ref = "jsonld" }
 dependencies-json = { module = "org.glassfish:jakarta.json", version.ref = "json" }
