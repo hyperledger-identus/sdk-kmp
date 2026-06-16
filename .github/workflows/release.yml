@@ -10,6 +10,11 @@ on:
       version:
         description: 'Version to release (e.g., 1.2.3)'
         required: true
+      release_maven:
+        description: 'Publish artifacts to Maven Central'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -22,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.ref }}
           token: ${{ secrets.IDENTUS_CI }}
 
       - name: Setup Node.js
@@ -41,7 +46,7 @@ jobs:
 
       - name: Update gradle.properties with new version
         run: |
-          sed -i '' 's/^version = *.*.*/version = ${{ github.event.inputs.version }}/' gradle.properties
+          sed -i -E 's/^version *= *.*/version = ${{ inputs.version }}/' gradle.properties
 
       - name: Build Kotlin Multiplatform Maven Artifacts
         run: ./gradlew publishToMavenLocal --no-configuration-cache
@@ -74,13 +79,13 @@ jobs:
           commit_user_email: ${{ steps.import-gpg.outputs.email }}
           commit_options: '-s -S'
           commit_message: |
-            chore(release): v${{ github.event.inputs.version }}
-          tagging_message: v${{ github.event.inputs.version }}
+            chore(release): v${{ inputs.version }}
+          tagging_message: v${{ inputs.version }}
           file_pattern: gradle.properties
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version }}
+          tag_name: v${{ inputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
