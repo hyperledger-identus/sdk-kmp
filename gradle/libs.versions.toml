@@ -19,7 +19,7 @@ ktlint = "12.1.0"
 dokka = "1.9.20"
 sqldelight = "2.0.1"
 protobuf-plugin = "0.9.1"
-vanniktech-maven-publish = "0.28.0"
+vanniktech-maven-publish = "0.33.0"
 
 coroutines = "1.8.1"
 serialization = "1.6.0"
